@@ -1,0 +1,167 @@
+package service
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+
+	"hxcoupon/internal/dto/request"
+	"hxcoupon/internal/dto/response"
+	"hxcoupon/internal/model"
+	"hxcoupon/internal/pkg/apperror"
+	"hxcoupon/internal/pkg/errcode"
+	"hxcoupon/internal/repository"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+)
+
+type StoreService struct {
+	db             *gorm.DB
+	storeRepo      *repository.StoreRepo
+	credentialRepo *repository.CredentialRepo
+}
+
+func NewStoreService(db *gorm.DB, storeRepo *repository.StoreRepo, credRepo *repository.CredentialRepo) *StoreService {
+	return &StoreService{db: db, storeRepo: storeRepo, credentialRepo: credRepo}
+}
+
+func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreRequest) (*response.StoreWithCredentialsResponse, error) {
+	// Validate store code uniqueness
+	existing, _ := s.storeRepo.GetByCode(ctx, req.Code)
+	if existing != nil {
+		return nil, apperror.NewWithMsg(errcode.InvalidParams, "store code already exists")
+	}
+
+	store := &model.Store{
+		Name:         req.Name,
+		Code:         req.Code,
+		AppID:        req.AppID,
+		Type:         req.Type,
+		Status:       1,
+		ContactName:  req.ContactName,
+		ContactPhone: req.ContactPhone,
+		Remark:       req.Remark,
+	}
+
+	if err := s.storeRepo.Create(ctx, store); err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	appKey, appSecret, err := s.generateCredentials(ctx, store.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &response.StoreWithCredentialsResponse{
+		StoreResponse: *response.ToStoreResponse(store),
+		Credentials: &response.CredentialResponse{
+			AppKey:    appKey,
+			AppSecret: appSecret,
+		},
+	}
+	return resp, nil
+}
+
+func (s *StoreService) GetByID(ctx context.Context, id uint64) (*response.StoreResponse, error) {
+	store, err := s.storeRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, apperror.New(errcode.NotFound)
+	}
+	return response.ToStoreResponse(store), nil
+}
+
+func (s *StoreService) List(ctx context.Context, page, pageSize int) (*response.PaginatedData, error) {
+	stores, total, err := s.storeRepo.List(ctx, page, pageSize)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	items := make([]response.StoreResponse, len(stores))
+	for i, s := range stores {
+		items[i] = *response.ToStoreResponse(&s)
+	}
+
+	return &response.PaginatedData{
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		Items:    items,
+	}, nil
+}
+
+func (s *StoreService) Update(ctx context.Context, id uint64, req *request.UpdateStoreRequest) (*response.StoreResponse, error) {
+	store, err := s.storeRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, apperror.New(errcode.NotFound)
+	}
+
+	store.Name = req.Name
+	store.ContactName = req.ContactName
+	store.ContactPhone = req.ContactPhone
+	store.Remark = req.Remark
+
+	if err := s.storeRepo.Update(ctx, store); err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+	return response.ToStoreResponse(store), nil
+}
+
+func (s *StoreService) UpdateStatus(ctx context.Context, id uint64, status int8) error {
+	if _, err := s.storeRepo.GetByID(ctx, id); err != nil {
+		return apperror.New(errcode.NotFound)
+	}
+	return s.storeRepo.UpdateStatus(ctx, id, status)
+}
+
+func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) (*response.CredentialResponse, error) {
+	store, err := s.storeRepo.GetByID(ctx, storeID)
+	if err != nil {
+		return nil, apperror.New(errcode.NotFound)
+	}
+
+	// Disable old credentials
+	_ = s.credentialRepo.DisableByStoreID(ctx, store.ID)
+
+	appKey, appSecret, err := s.generateCredentials(ctx, store.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.CredentialResponse{
+		AppKey:    appKey,
+		AppSecret: appSecret,
+	}, nil
+}
+
+func (s *StoreService) generateCredentials(ctx context.Context, storeID uint64) (string, string, error) {
+	appKeyBytes := make([]byte, 16)
+	appSecretBytes := make([]byte, 32)
+	if _, err := rand.Read(appKeyBytes); err != nil {
+		return "", "", apperror.NewWithErr(errcode.InternalError, err)
+	}
+	if _, err := rand.Read(appSecretBytes); err != nil {
+		return "", "", apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	appKey := "ak_" + hex.EncodeToString(appKeyBytes)
+	rawSecret := "sk_" + hex.EncodeToString(appSecretBytes)
+
+	hashedSecret, err := bcrypt.GenerateFromPassword([]byte(rawSecret), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	cred := &model.StoreAPICredential{
+		StoreID:   storeID,
+		AppKey:    appKey,
+		AppSecret: string(hashedSecret),
+		Status:    1,
+	}
+
+	if err := s.credentialRepo.Create(ctx, cred); err != nil {
+		return "", "", apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	return appKey, rawSecret, nil
+}

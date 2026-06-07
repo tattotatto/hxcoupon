@@ -1,0 +1,25 @@
+# Binaries
+/bin/
+*.exe
+*.test
+*.out
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+mysql_data/
+redis_data/
+
+# Claude
+.claude/
