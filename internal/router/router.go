@@ -2,6 +2,9 @@ package router
 
 import (
 	"context"
+	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"hxcoupon/config"
@@ -187,5 +190,25 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 			middleware.RateLimit("rl:action", 200, 1*time.Minute),
 			h.OpenCoupon.Refund,
 		)
+	}
+
+	// Serve React SPA static files in production
+	if cfg.Server.StaticDir != "" {
+		staticDir := cfg.Server.StaticDir
+		r.NoRoute(func(c *gin.Context) {
+			// API paths return 404 as JSON
+			if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
+				c.JSON(http.StatusNotFound, gin.H{"code": 40400, "message": "not found"})
+				return
+			}
+			// Try to serve exact file
+			filePath := filepath.Join(staticDir, c.Request.URL.Path)
+			if _, err := os.Stat(filePath); err == nil {
+				c.File(filePath)
+				return
+			}
+			// SPA fallback
+			c.File(filepath.Join(staticDir, "index.html"))
+		})
 	}
 }

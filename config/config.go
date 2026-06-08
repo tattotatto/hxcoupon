@@ -21,6 +21,7 @@ type Config struct {
 type ServerConfig struct {
 	Port         int           `mapstructure:"port"`
 	Mode         string        `mapstructure:"mode"`
+	StaticDir    string        `mapstructure:"static_dir"`
 	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 }
@@ -94,6 +95,7 @@ func Load(path string) (*Config, error) {
 	v.BindEnv("redis.port")
 	v.BindEnv("redis.password")
 	v.BindEnv("jwt.secret")
+	v.BindEnv("server.static_dir")
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
