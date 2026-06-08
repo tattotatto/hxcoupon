@@ -23,3 +23,7 @@ redis_data/
 
 # Claude
 .claude/
+
+# Frontend
+web/node_modules/
+web/dist/
