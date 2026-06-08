@@ -7,8 +7,10 @@ type Store struct {
 	Name         string    `gorm:"type:varchar(128);not null" json:"name"`
 	Code         string    `gorm:"type:varchar(5);uniqueIndex;not null" json:"code"`
 	AppID        string    `gorm:"type:varchar(64);uniqueIndex;not null" json:"app_id"`
-	Type         string    `gorm:"type:enum('miniprogram','h5');not null" json:"type"`
+	Type         string    `gorm:"type:enum('miniprogram','h5','app','web','api','other');not null;default:'api'" json:"type"`
 	Status       int8      `gorm:"not null;default:1" json:"status"`
+	UserID       *uint64   `gorm:"default:null;index" json:"user_id"`
+	Description  *string   `gorm:"type:varchar(512);default:null" json:"description"`
 	ContactName  string    `gorm:"type:varchar(64)" json:"contact_name"`
 	ContactPhone string    `gorm:"type:varchar(20)" json:"contact_phone"`
 	Remark       string    `gorm:"type:varchar(512)" json:"remark"`

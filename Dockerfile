@@ -8,7 +8,7 @@ COPY go.mod ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -o /server ./cmd/server
 
 FROM alpine:3.19
 

@@ -6,7 +6,6 @@ import (
 
 	"hxcoupon/internal/dto/request"
 	"hxcoupon/internal/dto/response"
-	"hxcoupon/internal/pkg/apperror"
 	"hxcoupon/internal/pkg/errcode"
 	"hxcoupon/internal/service"
 
@@ -117,4 +116,19 @@ func (h *StoreHandler) GenerateCredentials(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.Success(cred))
+}
+
+// DeleteStore soft-deletes a store.
+func (h *StoreHandler) DeleteStore(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	if err := h.storeService.Delete(c.Request.Context(), id); err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, response.Success(nil))
 }

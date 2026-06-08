@@ -570,3 +570,162 @@ func (s *CouponService) buildIssueResponse(ctx context.Context, ci *model.Coupon
 		Status:          ci.Status,
 	}, nil
 }
+
+// GetByID returns a single coupon instance by ID.
+func (s *CouponService) GetByID(ctx context.Context, id uint64) (*response.CouponDetailResponse, error) {
+	ci, err := s.instanceRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, apperror.New(errcode.NotFound)
+	}
+	return s.buildDetail(ctx, ci)
+}
+
+// ListAdminRecords returns paginated coupon instances for admin view.
+func (s *CouponService) ListAdminRecords(ctx context.Context, page, pageSize int) (*response.PaginatedData, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+	instances, total, err := s.instanceRepo.ListAll(ctx, offset, pageSize)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	type recordItem struct {
+		ID              uint64     `json:"id"`
+		CouponCode      string     `json:"coupon_code"`
+		TemplateName    string     `json:"template_name"`
+		UserPhone       string     `json:"user_phone"`
+		Status          string     `json:"status"`
+		SourceStoreName string     `json:"source_store_name"`
+		ReceiveTime     time.Time  `json:"receive_time"`
+		UseTime         *time.Time `json:"use_time"`
+	}
+
+	items := make([]recordItem, len(instances))
+	for i, ci := range instances {
+		items[i] = recordItem{
+			ID:         ci.ID,
+			CouponCode: ci.CouponCode,
+			UserPhone:  ci.UserPhone,
+			Status:     ci.Status,
+			ReceiveTime: ci.ReceiveTime,
+			UseTime:    ci.UseTime,
+		}
+		if t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID); t != nil {
+			items[i].TemplateName = t.Name
+		}
+		if s, _ := s.storeRepo.GetByID(ctx, ci.SourceStoreID); s != nil {
+			items[i].SourceStoreName = s.Name
+		}
+	}
+
+	return &response.PaginatedData{
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		Items:    items,
+	}, nil
+}
+
+// ListConsumeRecords returns paginated usage records for admin view.
+func (s *CouponService) ListConsumeRecords(ctx context.Context, page, pageSize int) (*response.PaginatedData, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	f := repository.UsageRecordListFilter{
+		Action:   "consume",
+		Page:     page,
+		PageSize: pageSize,
+	}
+
+	records, total, err := s.usageRecordRepo.List(ctx, f)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	type consumeRecordItem struct {
+		ID              uint64    `json:"id"`
+		CouponID        uint64    `json:"coupon_id"`
+		UserPhone       string    `json:"user_phone"`
+		StoreName       string    `json:"store_name"`
+		Action          string    `json:"action"`
+		OrderInfo       *model.JSON `json:"order_info,omitempty"`
+		CreatedAt       time.Time `json:"created_at"`
+	}
+
+	items := make([]consumeRecordItem, len(records))
+	for i, r := range records {
+		items[i] = consumeRecordItem{
+			ID:        r.ID,
+			CouponID:  r.CouponID,
+			UserPhone: r.UserPhone,
+			Action:    r.Action,
+			OrderInfo: r.OrderInfo,
+			CreatedAt: r.CreatedAt,
+		}
+		if s, _ := s.storeRepo.GetByID(ctx, r.StoreID); s != nil {
+			items[i].StoreName = s.Name
+		}
+	}
+
+	return &response.PaginatedData{
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		Items:    items,
+	}, nil
+}
+
+func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstance) (*response.CouponDetailResponse, error) {
+	t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID)
+	templateName := ""
+	if t != nil {
+		templateName = t.Name
+	}
+
+	sourceStore, _ := s.storeRepo.GetByID(ctx, ci.SourceStoreID)
+	sourceStoreName := ""
+	if sourceStore != nil {
+		sourceStoreName = sourceStore.Name
+	}
+
+	usedStoreName := ""
+	if ci.UsedAtStoreID != nil {
+		us, _ := s.storeRepo.GetByID(ctx, *ci.UsedAtStoreID)
+		if us != nil {
+			usedStoreName = us.Name
+		}
+	}
+
+	records, _ := s.usageRecordRepo.ListByCouponID(ctx, ci.ID)
+	recordBriefs := make([]response.CouponUsageRecordBrief, len(records))
+	for i, r := range records {
+		rs, _ := s.storeRepo.GetByID(ctx, r.StoreID)
+		storeName := ""
+		if rs != nil {
+			storeName = rs.Name
+		}
+		recordBriefs[i] = response.CouponUsageRecordBrief{
+			Action:    r.Action,
+			StoreName: storeName,
+			CreatedAt: r.CreatedAt,
+		}
+	}
+
+	resp := response.ToCouponDetailResponse(ci, templateName, sourceStoreName, usedStoreName, recordBriefs)
+	if t != nil {
+		resp.Type = t.Type
+		resp.DiscountValue = t.DiscountValue
+		resp.ThresholdAmount = t.ThresholdAmount
+	}
+	return resp, nil
+}

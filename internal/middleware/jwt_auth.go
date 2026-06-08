@@ -48,6 +48,8 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 		c.Set("admin_user_id", claims.UserID)
 		c.Set("admin_username", claims.Username)
 		c.Set("admin_role", claims.Role)
+		c.Set("admin_member_type", claims.MemberType)
+		c.Set("admin_approval_status", claims.ApprovalStatus)
 		c.Next()
 	}
 }

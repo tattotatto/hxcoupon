@@ -1,5 +1,13 @@
 package request
 
+// AdminIssueCouponRequest for admin-side coupon issuance (includes store_id)
+type AdminIssueCouponRequest struct {
+	StoreID       uint64 `json:"store_id" validate:"required"`
+	TemplateID    uint64 `json:"template_id" validate:"required"`
+	UserPhone     string `json:"user_phone" validate:"required,max=20"`
+	IdempotencyKey string `json:"idempotency_key" validate:"required,max=128"`
+}
+
 type IssueCouponRequest struct {
 	TemplateID     uint64 `json:"template_id" validate:"required"`
 	UserPhone      string `json:"user_phone" validate:"required,max=20"`

@@ -69,6 +69,7 @@ func main() {
 			&model.CouponInstance{},
 			&model.CouponUsageRecord{},
 			&model.AdminUser{},
+			&model.ApprovalRecord{},
 		)
 		logger.Info("Auto-migration completed")
 	}
@@ -81,6 +82,7 @@ func main() {
 	instanceRepo := repository.NewInstanceRepo(db)
 	usageRecordRepo := repository.NewUsageRecordRepo(db)
 	adminUserRepo := repository.NewAdminUserRepo(db)
+	approvalRecordRepo := repository.NewApprovalRecordRepo(db)
 
 	// Init services
 	authSvc := service.NewAuthService(adminUserRepo, cfg.JWT)
@@ -88,6 +90,8 @@ func main() {
 	templateSvc := service.NewTemplateService(db, templateRepo, templateStoreRepo, storeRepo)
 	couponSvc := service.NewCouponService(db, instanceRepo, templateRepo, templateStoreRepo, usageRecordRepo, storeRepo, credRepo)
 	statisticsSvc := service.NewStatisticsService(storeRepo, templateRepo, instanceRepo)
+	adminUserSvc := service.NewAdminUserService(db, adminUserRepo, storeRepo, credRepo, approvalRecordRepo)
+	reportSvc := service.NewReportService(db, instanceRepo, usageRecordRepo, templateRepo, storeRepo)
 
 	svc := &router.Services{
 		Auth:       authSvc,
@@ -95,6 +99,8 @@ func main() {
 		Template:   templateSvc,
 		Coupon:     couponSvc,
 		Statistics: statisticsSvc,
+		AdminUser:  adminUserSvc,
+		Report:     reportSvc,
 	}
 
 	handlers := router.NewHandlers(svc)

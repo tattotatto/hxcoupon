@@ -49,7 +49,7 @@ func checkRateLimit(ctx context.Context, key string, limit int, window time.Dura
 
 	pipe := redisutil.Client.Pipeline()
 	pipe.ZRemRangeByScore(ctx, key, "0", fmt.Sprintf("%d", windowStart))
-	countCmd := pipe.ZCard(ctx)
+	countCmd := pipe.ZCard(ctx, key)
 	member := redis.Z{Score: float64(now), Member: fmt.Sprintf("%d", now)}
 	pipe.ZAdd(ctx, key, member)
 	pipe.Expire(ctx, key, window)

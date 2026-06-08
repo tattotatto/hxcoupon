@@ -214,3 +214,17 @@ func (r *InstanceRepo) TrendUsedByDate(ctx context.Context, start, end string) (
 	).Scan(&results).Error
 	return results, err
 }
+
+// ListAll returns all coupon instances with pagination.
+func (r *InstanceRepo) ListAll(ctx context.Context, offset, limit int) ([]model.CouponInstance, int64, error) {
+	var instances []model.CouponInstance
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&model.CouponInstance{})
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	err := query.Order("id DESC").Offset(offset).Limit(limit).Find(&instances).Error
+	return instances, total, err
+}

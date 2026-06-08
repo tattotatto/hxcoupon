@@ -25,6 +25,8 @@ type CouponTemplate struct {
 	PerUserLimit       uint            `gorm:"default:1" json:"per_user_limit"`
 	ProductRestriction *JSON           `gorm:"type:json;default:null" json:"product_restriction"`
 	Status             int8            `gorm:"not null;default:0;index" json:"status"`
+	UserID             *uint64         `gorm:"default:null;index" json:"user_id"`
+	Description        *string         `gorm:"type:text;default:null" json:"description"`
 	CreatedBy          string          `gorm:"type:varchar(64)" json:"created_by"`
 	CreatedAt          time.Time       `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt          time.Time       `gorm:"autoUpdateTime" json:"updated_at"`

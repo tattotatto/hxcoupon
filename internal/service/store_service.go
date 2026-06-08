@@ -114,6 +114,14 @@ func (s *StoreService) UpdateStatus(ctx context.Context, id uint64, status int8)
 	return s.storeRepo.UpdateStatus(ctx, id, status)
 }
 
+// Delete soft-deletes a store by ID (sets status to -1).
+func (s *StoreService) Delete(ctx context.Context, id uint64) error {
+	if _, err := s.storeRepo.GetByID(ctx, id); err != nil {
+		return apperror.New(errcode.NotFound)
+	}
+	return s.storeRepo.UpdateStatus(ctx, id, -1)
+}
+
 func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) (*response.CredentialResponse, error) {
 	store, err := s.storeRepo.GetByID(ctx, storeID)
 	if err != nil {

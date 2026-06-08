@@ -29,9 +29,11 @@ type TokenPair struct {
 }
 
 type JWTClaims struct {
-	UserID   uint64 `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID         uint64  `json:"user_id"`
+	Username       string  `json:"username"`
+	Role           string  `json:"role"`
+	MemberType     *string `json:"member_type"`
+	ApprovalStatus int8    `json:"approval_status"`
 	jwt.RegisteredClaims
 }
 
@@ -52,9 +54,11 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*To
 	now := time.Now()
 
 	accessClaims := &JWTClaims{
-		UserID:   user.ID,
-		Username: user.Username,
-		Role:     user.Role,
+		UserID:         user.ID,
+		Username:       user.Username,
+		Role:           user.Role,
+		MemberType:     user.MemberType,
+		ApprovalStatus: user.ApprovalStatus,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -68,9 +72,11 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*To
 	}
 
 	refreshClaims := &JWTClaims{
-		UserID:   user.ID,
-		Username: user.Username,
-		Role:     user.Role,
+		UserID:         user.ID,
+		Username:       user.Username,
+		Role:           user.Role,
+		MemberType:     user.MemberType,
+		ApprovalStatus: user.ApprovalStatus,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(refreshTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -103,9 +109,11 @@ func (s *AuthService) RefreshToken(refreshTokenStr string) (*TokenPair, error) {
 	now := time.Now()
 
 	accessClaims := &JWTClaims{
-		UserID:   claims.UserID,
-		Username: claims.Username,
-		Role:     claims.Role,
+		UserID:         claims.UserID,
+		Username:       claims.Username,
+		Role:           claims.Role,
+		MemberType:     claims.MemberType,
+		ApprovalStatus: claims.ApprovalStatus,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),

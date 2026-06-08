@@ -13,11 +13,43 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService      *service.AuthService
+	adminUserService *service.AdminUserService
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *service.AuthService, adminUserService *service.AdminUserService) *AuthHandler {
+	return &AuthHandler{authService: authService, adminUserService: adminUserService}
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req request.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, err.Error()))
+		return
+	}
+
+	user, err := h.adminUserService.Register(c.Request.Context(), &req)
+	if err != nil {
+		appErr, ok := err.(*apperror.AppError)
+		if ok {
+			c.JSON(http.StatusBadRequest, response.Error(appErr.Code, appErr.Message))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, response.Error(errcode.InternalError, err.Error()))
+		return
+	}
+
+	msg := "registration submitted for review"
+	if user.ApprovalStatus == 1 {
+		msg = "registration successful"
+	}
+	c.JSON(http.StatusOK, response.Success(gin.H{
+		"id":              user.ID,
+		"username":        user.Username,
+		"member_type":     user.MemberType,
+		"approval_status": user.ApprovalStatus,
+		"message":         msg,
+	}))
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {

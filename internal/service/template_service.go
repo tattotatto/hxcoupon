@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"hxcoupon/internal/dto/request"
@@ -102,6 +101,40 @@ func (s *TemplateService) List(ctx context.Context, f request.TemplateListReques
 		Status:   f.Status,
 		Page:     f.Page,
 		PageSize: f.PageSize,
+	}
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize <= 0 {
+		filter.PageSize = 20
+	}
+
+	templates, total, err := s.templateRepo.List(ctx, filter)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	items := make([]response.TemplateResponse, len(templates))
+	for i, t := range templates {
+		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
+		items[i] = *response.ToTemplateResponse(&t, storeIDs)
+	}
+
+	return &response.PaginatedData{
+		Total:    total,
+		Page:     filter.Page,
+		PageSize: filter.PageSize,
+		Items:    items,
+	}, nil
+}
+
+// ListPublished returns all enabled templates for consumers to browse.
+func (s *TemplateService) ListPublished(ctx context.Context, page, pageSize int) (*response.PaginatedData, error) {
+	status := int8(1)
+	filter := repository.TemplateListFilter{
+		Status:   &status,
+		Page:     page,
+		PageSize: pageSize,
 	}
 	if filter.Page <= 0 {
 		filter.Page = 1
