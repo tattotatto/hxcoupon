@@ -70,13 +70,16 @@ client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+const SKIP_REFRESH_PATHS = ['/admin/login', '/admin/refresh'];
+
 client.interceptors.response.use(
   (res) => res,
   async (error: AxiosError<{ code?: number; message?: string }>) => {
     const status = error.response?.status;
     const msg = error.response?.data?.message || error.message || '网络请求失败';
+    const isAuthPath = error.config?.url ? SKIP_REFRESH_PATHS.some((p) => error.config!.url!.includes(p)) : false;
 
-    if (status === 401 && error.config && !error.config.headers['x-retry']) {
+    if (status === 401 && error.config && !error.config.headers['x-retry'] && !isAuthPath) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           pendingQueue.push({
@@ -108,7 +111,8 @@ client.interceptors.response.use(
       }
     }
 
-    if (status !== 401) {
+    // Always show error for non-401, and for 401 on auth paths
+    if (status !== 401 || isAuthPath) {
       message.error(msg);
     }
 
