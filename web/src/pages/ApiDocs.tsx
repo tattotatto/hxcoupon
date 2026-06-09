@@ -434,7 +434,103 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
   goLines.push('fmt.Println(string(respBody))');
   const go = goLines.join('\n');
 
-  return { curl, js, py, go };
+  // PHP
+  const phpLines: string[] = [];
+  phpLines.push('<?php');
+  phpLines.push('');
+  if (isHMAC) {
+    phpLines.push('// 需要先调用 sign_request() 生成签名头（见下方 HMAC 签名示例）');
+    phpLines.push('');
+  }
+  if (hasBody && bodyObj) {
+    phpLines.push(`$body = json_encode(${JSON.stringify(bodyObj)});`);
+    phpLines.push('');
+  }
+  phpLines.push('$ch = curl_init();');
+  phpLines.push(`curl_setopt($ch, CURLOPT_URL, '${BASE_URL}${fullPath}');`);
+  phpLines.push(`curl_setopt($ch, CURLOPT_CUSTOMREQUEST, '${method}');`);
+  phpLines.push('curl_setopt($ch, CURLOPT_HTTPHEADER, [');
+  if (!isHMAC && token) {
+    phpLines.push(`    'Authorization: Bearer ${token}',`);
+  }
+  if (isHMAC) {
+    phpLines.push('    // 使用 sign_request() 返回的 headers');
+    phpLines.push('    // "X-App-Key: YOUR_APP_KEY",');
+    phpLines.push('    // "X-Timestamp: " . $timestamp,');
+    phpLines.push('    // "X-Nonce: " . $nonce,');
+    phpLines.push('    // "X-Signature: " . $signature,');
+  }
+  phpLines.push(`    'Content-Type: application/json',`);
+  phpLines.push(']);');
+  if (hasBody && bodyObj) {
+    phpLines.push('curl_setopt($ch, CURLOPT_POSTFIELDS, $body);');
+  }
+  phpLines.push('curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);');
+  phpLines.push('$response = curl_exec($ch);');
+  phpLines.push('curl_close($ch);');
+  phpLines.push('');
+  phpLines.push('echo $response;');
+  const php = phpLines.join('\n');
+
+  // C#
+  const csLines: string[] = [];
+  csLines.push('using System.Net.Http;');
+  csLines.push('using System.Text;');
+  csLines.push('using Newtonsoft.Json;');
+  csLines.push('');
+  if (isHMAC) {
+    csLines.push('// 需要先调用 SignRequest() 生成签名头（见下方 HMAC 签名示例）');
+    csLines.push('');
+  }
+  csLines.push('var client = new HttpClient();');
+  if (!isHMAC && token) {
+    csLines.push(`client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "${token}");`);
+  }
+  if (isHMAC) {
+    csLines.push('// client.DefaultRequestHeaders.Add("X-App-Key", appKey);');
+    csLines.push('// client.DefaultRequestHeaders.Add("X-Timestamp", timestamp);');
+    csLines.push('// client.DefaultRequestHeaders.Add("X-Nonce", nonce);');
+    csLines.push('// client.DefaultRequestHeaders.Add("X-Signature", signature);');
+  }
+  csLines.push('');
+  if (hasBody && bodyObj) {
+    csLines.push(`var body = new ${JSON.stringify(bodyObj).replace(/"/g, '').replace(/:([^,}]+)/g, ': "$1"')};`);
+    // Use simple anonymous object representation
+    const csBodyLines: string[] = [];
+    csBodyLines.push('var body = new');
+    csBodyLines.push('{');
+    const entries = Object.entries(bodyObj);
+    entries.forEach(([k, v], i) => {
+      const comma = i < entries.length - 1 ? ',' : '';
+      if (typeof v === 'number') {
+        csBodyLines.push(`    ${k} = ${v}${comma}`);
+      } else {
+        csBodyLines.push(`    ${k} = "${v}"${comma}`);
+      }
+    });
+    csBodyLines.push('};');
+    csLines[csLines.length - 1] = csBodyLines.join('\n');
+    csLines.push('var content = new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json");');
+  }
+  csLines.push('');
+  const csMethodLower = method.toLowerCase();
+  if (hasBody && bodyObj) {
+    if (csMethodLower === 'post') {
+      csLines.push(`var response = await client.PostAsync("https://your-domain.com${BASE_URL}${fullPath}", content);`);
+    } else if (csMethodLower === 'put') {
+      csLines.push(`var response = await client.PutAsync("https://your-domain.com${BASE_URL}${fullPath}", content);`);
+    } else {
+      csLines.push(`var request = new HttpRequestMessage(HttpMethod.${method}, "https://your-domain.com${BASE_URL}${fullPath}") { Content = content };`);
+      csLines.push('var response = await client.SendAsync(request);');
+    }
+  } else {
+    csLines.push(`var response = await client.GetAsync("https://your-domain.com${BASE_URL}${fullPath}");`);
+  }
+  csLines.push('var result = await response.Content.ReadAsStringAsync();');
+  csLines.push('Console.WriteLine(result);');
+  const cs = csLines.join('\n');
+
+  return { curl, js, py, go, php, cs };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────
@@ -984,6 +1080,69 @@ func SignRequest(method, path, body, appKey, appSecret string) map[string]string
                                 </pre>
                               ),
                             },
+                            {
+                              key: 'hmac-php',
+                              label: 'PHP',
+                              children: (
+                                <pre style={codeBlockStyle}>
+{`<?php
+
+function sign_request($method, $path, $body, $appKey, $appSecret) {
+    $timestamp = (string)time();
+    $nonce = bin2hex(random_bytes(16));
+    $bodyStr = $body ? json_encode($body) : '';
+
+    $signingStr = $method . "\\n" . $path . "\\n" .
+        $timestamp . "\\n" . $nonce . "\\n" . $bodyStr;
+    $signature = base64_encode(
+        hash_hmac('sha256', $signingStr, $appSecret, true)
+    );
+
+    return [
+        'X-App-Key'    => $appKey,
+        'X-Timestamp'  => $timestamp,
+        'X-Nonce'      => $nonce,
+        'X-Signature'  => $signature,
+        'Content-Type' => 'application/json',
+    ];
+}`}
+                                </pre>
+                              ),
+                            },
+                            {
+                              key: 'hmac-cs',
+                              label: 'C#',
+                              children: (
+                                <pre style={codeBlockStyle}>
+{`using System.Security.Cryptography;
+using System.Text;
+
+public static Dictionary<string, string> SignRequest(
+    string method, string path, string body,
+    string appKey, string appSecret)
+{
+    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+    var nonce = Guid.NewGuid().ToString();
+
+    var signingStr = method + "\\n" + path + "\\n" +
+        timestamp + "\\n" + nonce + "\\n" + body;
+
+    using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(appSecret));
+    var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signingStr));
+    var signature = Convert.ToBase64String(hash);
+
+    return new Dictionary<string, string>
+    {
+        ["X-App-Key"]    = appKey,
+        ["X-Timestamp"]  = timestamp,
+        ["X-Nonce"]      = nonce,
+        ["X-Signature"]  = signature,
+        ["Content-Type"] = "application/json",
+    };
+}`}
+                                </pre>
+                              ),
+                            },
                           ]}
                         />
                       </div>
@@ -1041,6 +1200,30 @@ func SignRequest(method, path, body, appKey, appSecret string) map[string]string
                                   <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyCode(codeSamples.go)}>复制</Button>
                                 </div>
                                 <pre style={codeBlockStyle}>{codeSamples.go}</pre>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: 'php',
+                            label: 'PHP',
+                            children: (
+                              <div>
+                                <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyCode(codeSamples.php)}>复制</Button>
+                                </div>
+                                <pre style={codeBlockStyle}>{codeSamples.php}</pre>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: 'cs',
+                            label: 'C#',
+                            children: (
+                              <div>
+                                <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyCode(codeSamples.cs)}>复制</Button>
+                                </div>
+                                <pre style={codeBlockStyle}>{codeSamples.cs}</pre>
                               </div>
                             ),
                           },
