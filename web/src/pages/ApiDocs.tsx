@@ -24,7 +24,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   CodeOutlined,
-  InfoCircleOutlined,
 } from '@ant-design/icons';
 import client from '../api/client';
 import axios from 'axios';
@@ -584,8 +583,6 @@ export default function ApiDocs() {
     },
   ];
 
-  const isHMACGroup = (groupName: string) => groupName.includes('HMAC');
-
   return (
     <div style={{ display: 'flex', gap: 16, minHeight: 'calc(100vh - 200px)' }}>
       {/* ── Left: API Catalog ── */}
@@ -611,27 +608,6 @@ export default function ApiDocs() {
                 </Space>
               }
             >
-              {isHMACGroup(group.name) && (
-                <Alert
-                  type="info"
-                  icon={<InfoCircleOutlined />}
-                  message="HMAC 签名认证"
-                  description={
-                    <div>
-                      <Paragraph style={{ marginBottom: 4, fontSize: 12 }}>
-                        调用 Open API 需要 HMAC-SHA256 签名。签名串格式：
-                      </Paragraph>
-                      <Text code style={{ fontSize: 11, wordBreak: 'break-all', display: 'block', marginBottom: 4 }}>
-                        HTTP方法 + "\n" + URL路径 + "\n" + Timestamp + "\n" + Nonce + "\n" + 请求体
-                      </Text>
-                      <Paragraph style={{ marginBottom: 0, fontSize: 11, color: '#666' }}>
-                        Signature = Base64(HMAC-SHA256(AppSecret, 签名串))
-                      </Paragraph>
-                    </div>
-                  }
-                  style={{ margin: '0 12px 8px', fontSize: 12 }}
-                />
-              )}
               <Table
                 dataSource={group.endpoints.map((ep, ei) => ({ ...ep, key: `${gi}-${ei}` }))}
                 columns={columns}
