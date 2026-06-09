@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, DatePicker, Button, Space, Spin, Empty } from 'antd';
-import { DownloadOutlined, ReloadOutlined, RiseOutlined, ShopOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { Line } from '@ant-design/charts';
+import { DownloadOutlined, ReloadOutlined, RiseOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import dayjs, { Dayjs } from 'dayjs';
 import { reportApi } from '../../api/report';
 
@@ -21,7 +21,7 @@ export default function ReportDashboard() {
         reportApi.trend(dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')),
       ]);
       setOverview(overviewRes.data.data);
-      setTrend(trendRes.data.data || []);
+      setTrend(Array.isArray(trendRes.data.data) ? trendRes.data.data : []);
     } catch { /* handled */ }
     finally { setLoading(false); }
   };
@@ -41,29 +41,18 @@ export default function ReportDashboard() {
     } catch { /* handled */ }
   };
 
-  const trendData = trend.flatMap((item) => [
-    { date: item.date, value: item.issued, type: '发券' },
-    { date: item.date, value: item.used, type: '核销' },
-  ]);
-
-  const chartConfig = {
-    data: trendData,
-    xField: 'date',
-    yField: 'value',
-    seriesField: 'type',
-    color: ['#1677ff', '#52c41a'],
-    smooth: true,
-    point: { size: 3 },
-    yAxis: { title: { text: '数量' } },
-    tooltip: { shared: true },
-  };
+  const chartData = (Array.isArray(trend) ? trend : []).map((item) => ({
+    date: item.date,
+    发券: item.issued,
+    核销: item.used,
+  }));
 
   return (
     <Spin spinning={loading}>
       <div>
-        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <h2 style={{ margin: 0, fontSize: 20 }}>数据报表</h2>
-          <Space>
+          <Space wrap>
             <RangePicker value={dates} onChange={(vals) => vals && setDates([vals[0]!, vals[1]!])} allowClear={false} />
             <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
             <Button icon={<DownloadOutlined />} onClick={() => handleExport('coupons')}>导出券数据</Button>
@@ -100,8 +89,18 @@ export default function ReportDashboard() {
         </Row>
 
         <Card title="趋势图" style={{ borderRadius: 12 }}>
-          {trend.length > 0 ? (
-            <Line {...chartConfig} height={350} />
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="发券" stroke="#1677ff" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="核销" stroke="#52c41a" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
             <Empty description="暂无趋势数据" />
           )}

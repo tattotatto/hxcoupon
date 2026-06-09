@@ -6,9 +6,8 @@ import {
   SendOutlined,
   CheckCircleOutlined,
   RiseOutlined,
-  ArrowUpOutlined,
 } from '@ant-design/icons';
-import { Line } from '@ant-design/charts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import dayjs, { Dayjs } from 'dayjs';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -44,7 +43,7 @@ interface CardDef {
   suffix?: string;
 }
 
-function DraggableCard({ card, data, children }: { card: CardDef; data: StatData | null; children?: React.ReactNode }) {
+function DraggableCard({ card, data }: { card: CardDef; data: StatData | null }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.key });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -87,7 +86,6 @@ function DraggableCard({ card, data, children }: { card: CardDef; data: StatData
             {card.icon}
           </div>
         </div>
-        {children}
       </Card>
     </div>
   );
@@ -124,7 +122,7 @@ export default function Dashboard() {
         reportApi.trend(dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')),
       ]);
       setStats(overviewRes.data.data);
-      setTrend(trendRes.data.data || []);
+      setTrend(Array.isArray(trendRes.data.data) ? trendRes.data.data : []);
     } catch {
       // handled by interceptor
     } finally {
@@ -136,25 +134,17 @@ export default function Dashboard() {
     fetchData();
   }, [dates]);
 
-  const trendConfig = {
-    data: trend,
-    xField: 'date',
-    yField: 'value',
-    seriesField: 'type',
-    color: ['#1677ff', '#52c41a'],
-    smooth: true,
-    animation: { appear: { duration: 800 } },
-    point: { size: 3, shape: 'circle' },
-    legend: { position: 'top' as const },
-    yAxis: { title: { text: '数量' } },
-    xAxis: { label: { autoRotate: true } },
-    tooltip: { shared: true },
-  };
-
-  const transformedTrend = trend.flatMap((item) => [
+  const transformedTrend = (Array.isArray(trend) ? trend : []).flatMap((item) => [
     { date: item.date, value: item.issued, type: '发券' },
     { date: item.date, value: item.used, type: '核销' },
   ]);
+
+  // Pivot: group by date for recharts
+  const chartData = (Array.isArray(trend) ? trend : []).map((item) => ({
+    date: item.date,
+    发券: item.issued,
+    核销: item.used,
+  }));
 
   return (
     <Spin spinning={loading}>
@@ -194,12 +184,19 @@ export default function Dashboard() {
           </SortableContext>
         </DndContext>
 
-        <Card
-          title="趋势统计"
-          style={{ marginTop: 24, borderRadius: 12 }}
-        >
-          {trend.length > 0 ? (
-            <Line {...trendConfig} data={transformedTrend} height={300} />
+        <Card title="趋势统计" style={{ marginTop: 24, borderRadius: 12 }}>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="发券" stroke="#1677ff" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="核销" stroke="#52c41a" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
             <Empty description="暂无趋势数据" />
           )}
