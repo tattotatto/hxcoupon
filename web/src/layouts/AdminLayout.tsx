@@ -15,6 +15,7 @@ import {
   SendOutlined,
   FileTextOutlined,
   CheckCircleOutlined,
+  ReadOutlined,
 } from '@ant-design/icons';
 import { Dropdown, Avatar, Space } from 'antd';
 import { useAuthStore } from '../stores/authStore';
@@ -78,6 +79,7 @@ export default function AdminLayout() {
     '/coupons/consume': { name: '核销', icon: <CheckCircleOutlined /> },
     '/reports': { name: '数据报表', icon: <BarChartOutlined /> },
     '/users': { name: '用户管理', icon: <TeamOutlined /> },
+    '/api-docs': { name: 'API接口说明', icon: <ReadOutlined /> },
   };
 
   const userMenuItems = [
@@ -103,7 +105,7 @@ export default function AdminLayout() {
 
   return (
     <ProLayout
-      title="优惠券管理"
+      title="宏曦优惠券管理平台"
       logo={null}
       collapsed={collapsed}
       onCollapse={setCollapsed}
@@ -161,6 +163,8 @@ export default function AdminLayout() {
         if (isSuperAdmin) {
           items.push({ path: '/users', name: '用户管理', icon: <TeamOutlined /> });
         }
+
+        items.push({ path: '/api-docs', name: 'API接口说明', icon: <ReadOutlined /> });
 
         return items;
       }}

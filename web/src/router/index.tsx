@@ -14,6 +14,7 @@ import IssueForm from '../pages/coupons/IssueForm';
 import CouponRecords from '../pages/coupons/CouponRecords';
 import ConsumeForm from '../pages/coupons/ConsumeForm';
 import ReportDashboard from '../pages/reports/ReportDashboard';
+import ApiDocs from '../pages/ApiDocs';
 
 const router = createBrowserRouter([
   {
@@ -85,6 +86,7 @@ const router = createBrowserRouter([
           </ApprovalGuard>
         ),
       },
+      { path: 'api-docs', element: <ApiDocs /> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

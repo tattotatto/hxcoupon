@@ -43,8 +43,8 @@ export default function Login() {
     >
       <Card style={{ width: 400, borderRadius: 12, boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <Title level={3} style={{ marginBottom: 4 }}>优惠券管理系统</Title>
-          <Text type="secondary">hxcoupon 管理后台</Text>
+          <Title level={3} style={{ marginBottom: 4 }}>宏曦优惠券管理平台</Title>
+          <Text type="secondary">全平台优惠券管理</Text>
         </div>
         <Form
           name="login"
