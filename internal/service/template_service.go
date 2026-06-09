@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"hxcoupon/internal/dto/request"
@@ -9,6 +10,7 @@ import (
 	"hxcoupon/internal/model"
 	"hxcoupon/internal/pkg/apperror"
 	"hxcoupon/internal/pkg/errcode"
+	redisutil "hxcoupon/internal/pkg/redis"
 	"hxcoupon/internal/repository"
 
 	"gorm.io/gorm"
@@ -80,6 +82,9 @@ func (s *TemplateService) Create(ctx context.Context, req *request.CreateTemplat
 	if err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
 	}
+
+	// No need to invalidate on create since it's a new ID, but populate cache
+	redisutil.CacheSet(ctx, fmt.Sprintf("%s%d", redisutil.KeyTemplate, t.ID), *t, redisutil.TTLTemplate)
 
 	storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 	return response.ToTemplateResponse(t, storeIDs), nil
@@ -201,6 +206,8 @@ func (s *TemplateService) Update(ctx context.Context, id uint64, req *request.Up
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
 	}
 
+	s.invalidateTemplateCache(ctx, id)
+
 	storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, id)
 	return response.ToTemplateResponse(t, storeIDs), nil
 }
@@ -209,7 +216,11 @@ func (s *TemplateService) UpdateStatus(ctx context.Context, id uint64, status in
 	if _, err := s.templateRepo.GetByID(ctx, id); err != nil {
 		return apperror.New(errcode.NotFound)
 	}
-	return s.templateRepo.UpdateStatus(ctx, id, status)
+	if err := s.templateRepo.UpdateStatus(ctx, id, status); err != nil {
+		return err
+	}
+	s.invalidateTemplateCache(ctx, id)
+	return nil
 }
 
 func (s *TemplateService) Delete(ctx context.Context, id uint64) error {
@@ -220,12 +231,35 @@ func (s *TemplateService) Delete(ctx context.Context, id uint64) error {
 	if t.Status != 0 {
 		return apperror.NewWithMsg(errcode.Forbidden, "only draft templates can be deleted")
 	}
-	return s.templateRepo.UpdateStatus(ctx, id, 3) // soft-delete as status=3
+	if err := s.templateRepo.UpdateStatus(ctx, id, 3); err != nil {
+		return err
+	}
+	s.invalidateTemplateCache(ctx, id)
+	return nil
 }
 
-// GetTemplateByID is a lightweight lookup for internal use.
+// GetTemplateByID is a lightweight lookup for internal use (with Redis cache).
 func (s *TemplateService) GetTemplateByID(ctx context.Context, id uint64) (*model.CouponTemplate, error) {
-	return s.templateRepo.GetByID(ctx, id)
+	// Check cache first
+	cacheKey := fmt.Sprintf("%s%d", redisutil.KeyTemplate, id)
+	var cached model.CouponTemplate
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return &cached, nil
+	}
+
+	t, err := s.templateRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate cache
+	redisutil.CacheSet(ctx, cacheKey, *t, redisutil.TTLTemplate)
+	return t, nil
+}
+
+// invalidateTemplateCache removes cached template by id.
+func (s *TemplateService) invalidateTemplateCache(ctx context.Context, id uint64) {
+	redisutil.CacheDelete(ctx, fmt.Sprintf("%s%d", redisutil.KeyTemplate, id))
 }
 
 // GetStoreCode returns the 5-char code for a store.

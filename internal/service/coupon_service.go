@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"hxcoupon/internal/dto/response"
@@ -10,6 +11,7 @@ import (
 	"hxcoupon/internal/pkg/apperror"
 	"hxcoupon/internal/pkg/couponcode"
 	"hxcoupon/internal/pkg/errcode"
+	redisutil "hxcoupon/internal/pkg/redis"
 	"hxcoupon/internal/repository"
 
 	"gorm.io/gorm"
@@ -175,7 +177,7 @@ func (s *CouponService) GetAvailable(ctx context.Context, userPhone string, stor
 
 	items := make([]response.CouponAvailableResponse, len(instances))
 	for i, ci := range instances {
-		t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID)
+		t, _ := s.getTemplateCached(ctx, ci.TemplateID)
 		templateName := ""
 		if t != nil {
 			templateName = t.Name
@@ -242,7 +244,7 @@ func (s *CouponService) Consume(ctx context.Context, couponCode, userPhone strin
 		}
 
 		// Validate store applicability
-		t, err := s.templateRepo.GetByID(ctx, ci.TemplateID)
+		t, err := s.getTemplateCached(ctx, ci.TemplateID)
 		if err != nil {
 			return apperror.NewWithErr(errcode.NotFound, err)
 		}
@@ -414,7 +416,7 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 			ValidStart: ci.ValidStart,
 			ValidEnd:   ci.ValidEnd,
 		}
-		t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID)
+		t, _ := s.getTemplateCached(ctx, ci.TemplateID)
 		if t != nil {
 			items[i].TemplateName = t.Name
 			items[i].Type = t.Type
@@ -438,13 +440,13 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 		return nil, apperror.New(errcode.NotFound)
 	}
 
-	t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID)
+	t, _ := s.getTemplateCached(ctx, ci.TemplateID)
 	templateName := ""
 	if t != nil {
 		templateName = t.Name
 	}
 
-	sourceStore, _ := s.storeRepo.GetByID(ctx, ci.SourceStoreID)
+	sourceStore, _ := s.getStoreCached(ctx, ci.SourceStoreID)
 	sourceStoreName := ""
 	if sourceStore != nil {
 		sourceStoreName = sourceStore.Name
@@ -452,7 +454,7 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 
 	usedStoreName := ""
 	if ci.UsedAtStoreID != nil {
-		us, _ := s.storeRepo.GetByID(ctx, *ci.UsedAtStoreID)
+		us, _ := s.getStoreCached(ctx, *ci.UsedAtStoreID)
 		if us != nil {
 			usedStoreName = us.Name
 		}
@@ -461,7 +463,7 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 	records, _ := s.usageRecordRepo.ListByCouponID(ctx, ci.ID)
 	recordBriefs := make([]response.CouponUsageRecordBrief, len(records))
 	for i, r := range records {
-		rs, _ := s.storeRepo.GetByID(ctx, r.StoreID)
+		rs, _ := s.getStoreCached(ctx, r.StoreID)
 		storeName := ""
 		if rs != nil {
 			storeName = rs.Name
@@ -482,22 +484,62 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 	return resp, nil
 }
 
-// VerifyStoreCredentials verifies store HMAC credentials.
+// VerifyStoreCredentials verifies store HMAC credentials (with Redis cache).
 func (s *CouponService) VerifyStoreCredentials(ctx context.Context, appKey string) (uint64, error) {
+	// Check Redis cache first
+	cacheKey := redisutil.KeyCredential + appKey
+	var cached struct {
+		StoreID   uint64 `json:"store_id"`
+		AppSecret string `json:"app_secret"`
+	}
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return cached.StoreID, nil
+	}
+
 	cred, err := s.credentialRepo.GetByAppKey(ctx, appKey)
 	if err != nil {
 		return 0, apperror.New(errcode.StoreNotAuth)
 	}
+
+	// Populate cache
+	redisutil.CacheSet(ctx, cacheKey, map[string]interface{}{
+		"store_id":   cred.StoreID,
+		"app_secret": cred.AppSecret,
+	}, redisutil.TTLCredential)
+
 	return cred.StoreID, nil
 }
 
-// GetStoreSecret returns the raw app_secret for HMAC verification.
+// GetStoreSecret returns the raw app_secret for HMAC verification (with Redis cache).
 func (s *CouponService) GetStoreSecret(ctx context.Context, appKey string) (string, error) {
+	// Check Redis cache first
+	cacheKey := redisutil.KeyCredential + appKey
+	var cached struct {
+		StoreID   uint64 `json:"store_id"`
+		AppSecret string `json:"app_secret"`
+	}
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return cached.AppSecret, nil
+	}
+
 	cred, err := s.credentialRepo.GetByAppKey(ctx, appKey)
 	if err != nil {
 		return "", apperror.New(errcode.StoreNotAuth)
 	}
+
+	// Populate cache
+	redisutil.CacheSet(ctx, cacheKey, map[string]interface{}{
+		"store_id":   cred.StoreID,
+		"app_secret": cred.AppSecret,
+	}, redisutil.TTLCredential)
+
 	return cred.AppSecret, nil
+}
+
+// InvalidateCredentialCache removes cached credential for an appKey.
+func (s *CouponService) InvalidateCredentialCache(ctx context.Context, appKey string) {
+	cacheKey := fmt.Sprintf("%s%s", redisutil.KeyCredential, appKey)
+	redisutil.CacheDelete(ctx, cacheKey)
 }
 
 // --- Private helpers ---
@@ -529,7 +571,7 @@ func (s *CouponService) generateCouponCode(ctx context.Context, t *model.CouponT
 		if err != nil || len(storeIDs) == 0 {
 			return "", apperror.NewWithErr(errcode.InternalError, err)
 		}
-		store, err := s.storeRepo.GetByID(ctx, storeIDs[0])
+		store, err := s.getStoreCached(ctx, storeIDs[0])
 		if err != nil {
 			return "", apperror.NewWithErr(errcode.InternalError, err)
 		}
@@ -553,8 +595,38 @@ func (s *CouponService) calculateDiscount(t *model.CouponTemplate, orderAmount f
 	}
 }
 
+// getTemplateCached returns a cached template by ID to avoid N+1 DB queries.
+func (s *CouponService) getTemplateCached(ctx context.Context, id uint64) (*model.CouponTemplate, error) {
+	cacheKey := fmt.Sprintf("%s%d", redisutil.KeyTemplate, id)
+	var cached model.CouponTemplate
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return &cached, nil
+	}
+	t, err := s.templateRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	redisutil.CacheSet(ctx, cacheKey, *t, redisutil.TTLTemplate)
+	return t, nil
+}
+
+// getStoreCached returns a cached store by ID to avoid N+1 DB queries.
+func (s *CouponService) getStoreCached(ctx context.Context, id uint64) (*model.Store, error) {
+	cacheKey := fmt.Sprintf("%s%d", redisutil.KeyStore, id)
+	var cached model.Store
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return &cached, nil
+	}
+	store, err := s.storeRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	redisutil.CacheSet(ctx, cacheKey, *store, redisutil.TTLStore)
+	return store, nil
+}
+
 func (s *CouponService) buildIssueResponse(ctx context.Context, ci *model.CouponInstance) (*response.CouponIssueResponse, error) {
-	t, err := s.templateRepo.GetByID(ctx, ci.TemplateID)
+	t, err := s.getTemplateCached(ctx, ci.TemplateID)
 	if err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
 	}
@@ -616,10 +688,10 @@ func (s *CouponService) ListAdminRecords(ctx context.Context, page, pageSize int
 			ReceiveTime: ci.ReceiveTime,
 			UseTime:    ci.UseTime,
 		}
-		if t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID); t != nil {
+		if t, _ := s.getTemplateCached(ctx, ci.TemplateID); t != nil {
 			items[i].TemplateName = t.Name
 		}
-		if s, _ := s.storeRepo.GetByID(ctx, ci.SourceStoreID); s != nil {
+		if s, _ := s.getStoreCached(ctx, ci.SourceStoreID); s != nil {
 			items[i].SourceStoreName = s.Name
 		}
 	}
@@ -672,7 +744,7 @@ func (s *CouponService) ListConsumeRecords(ctx context.Context, page, pageSize i
 			OrderInfo: r.OrderInfo,
 			CreatedAt: r.CreatedAt,
 		}
-		if s, _ := s.storeRepo.GetByID(ctx, r.StoreID); s != nil {
+		if s, _ := s.getStoreCached(ctx, r.StoreID); s != nil {
 			items[i].StoreName = s.Name
 		}
 	}
@@ -686,13 +758,13 @@ func (s *CouponService) ListConsumeRecords(ctx context.Context, page, pageSize i
 }
 
 func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstance) (*response.CouponDetailResponse, error) {
-	t, _ := s.templateRepo.GetByID(ctx, ci.TemplateID)
+	t, _ := s.getTemplateCached(ctx, ci.TemplateID)
 	templateName := ""
 	if t != nil {
 		templateName = t.Name
 	}
 
-	sourceStore, _ := s.storeRepo.GetByID(ctx, ci.SourceStoreID)
+	sourceStore, _ := s.getStoreCached(ctx, ci.SourceStoreID)
 	sourceStoreName := ""
 	if sourceStore != nil {
 		sourceStoreName = sourceStore.Name
@@ -700,7 +772,7 @@ func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstanc
 
 	usedStoreName := ""
 	if ci.UsedAtStoreID != nil {
-		us, _ := s.storeRepo.GetByID(ctx, *ci.UsedAtStoreID)
+		us, _ := s.getStoreCached(ctx, *ci.UsedAtStoreID)
 		if us != nil {
 			usedStoreName = us.Name
 		}
@@ -709,7 +781,7 @@ func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstanc
 	records, _ := s.usageRecordRepo.ListByCouponID(ctx, ci.ID)
 	recordBriefs := make([]response.CouponUsageRecordBrief, len(records))
 	for i, r := range records {
-		rs, _ := s.storeRepo.GetByID(ctx, r.StoreID)
+		rs, _ := s.getStoreCached(ctx, r.StoreID)
 		storeName := ""
 		if rs != nil {
 			storeName = rs.Name

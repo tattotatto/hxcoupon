@@ -11,6 +11,7 @@ import (
 	"hxcoupon/internal/model"
 	"hxcoupon/internal/pkg/apperror"
 	"hxcoupon/internal/pkg/errcode"
+	redisutil "hxcoupon/internal/pkg/redis"
 	"hxcoupon/internal/repository"
 
 	"gorm.io/gorm"
@@ -34,8 +35,14 @@ func NewReportService(db *gorm.DB, instanceRepo *repository.InstanceRepo, usageR
 	}
 }
 
-// Overview returns scoped statistics based on user role and ownership.
+// Overview returns scoped statistics based on user role and ownership (with Redis cache).
 func (s *ReportService) Overview(ctx context.Context, role string, userID uint64, storeID *uint64) (*response.OverviewResponse, error) {
+	// Check Redis cache first
+	var cached response.OverviewResponse
+	if redisutil.CacheGet(ctx, redisutil.KeyReportOverview, &cached) {
+		return &cached, nil
+	}
+
 	totalTemplates, err := s.templateRepo.Count(ctx)
 	if err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
@@ -63,7 +70,7 @@ func (s *ReportService) Overview(ctx context.Context, role string, userID uint64
 	todayIssued, _ := s.instanceRepo.CountIssuedToday(ctx)
 	todayUsed, _ := s.instanceRepo.CountUsedToday(ctx)
 
-	return &response.OverviewResponse{
+	result := &response.OverviewResponse{
 		TotalStores:    totalStores,
 		TotalTemplates: totalTemplates,
 		TotalIssued:    totalIssued,
@@ -71,11 +78,22 @@ func (s *ReportService) Overview(ctx context.Context, role string, userID uint64
 		UsageRate:      usageRate,
 		TodayIssued:    todayIssued,
 		TodayUsed:      todayUsed,
-	}, nil
+	}
+
+	// Cache for 60 seconds
+	redisutil.CacheSet(ctx, redisutil.KeyReportOverview, result, redisutil.TTLReportOverview)
+	return result, nil
 }
 
-// Trend returns daily trend data.
+// Trend returns daily trend data (with Redis cache).
 func (s *ReportService) Trend(ctx context.Context, startDate, endDate string) (*response.TrendResponse, error) {
+	// Check Redis cache first
+	cacheKey := fmt.Sprintf("%s%s:%s", redisutil.KeyReportTrend, startDate, endDate)
+	var cached []response.TrendItem
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return &response.TrendResponse{Items: cached}, nil
+	}
+
 	issuedData, err := s.instanceRepo.TrendIssuedByDate(ctx, startDate, endDate)
 	if err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
@@ -87,6 +105,8 @@ func (s *ReportService) Trend(ctx context.Context, startDate, endDate string) (*
 
 	items := mergeTrendData(issuedData, usedData)
 
+	// Cache for 5 minutes
+	redisutil.CacheSet(ctx, cacheKey, items, redisutil.TTLReportTrend)
 	return &response.TrendResponse{Items: items}, nil
 }
 

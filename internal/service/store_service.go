@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 
 	"hxcoupon/internal/dto/request"
 	"hxcoupon/internal/dto/response"
 	"hxcoupon/internal/model"
 	"hxcoupon/internal/pkg/apperror"
 	"hxcoupon/internal/pkg/errcode"
+	redisutil "hxcoupon/internal/pkg/redis"
 	"hxcoupon/internal/repository"
 
 	"golang.org/x/crypto/bcrypt"
@@ -64,11 +66,28 @@ func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreReque
 }
 
 func (s *StoreService) GetByID(ctx context.Context, id uint64) (*response.StoreResponse, error) {
-	store, err := s.storeRepo.GetByID(ctx, id)
+	store, err := s.getStoreCached(ctx, id)
 	if err != nil {
 		return nil, apperror.New(errcode.NotFound)
 	}
 	return response.ToStoreResponse(store), nil
+}
+
+// getStoreCached returns store model from cache or DB.
+func (s *StoreService) getStoreCached(ctx context.Context, id uint64) (*model.Store, error) {
+	cacheKey := fmt.Sprintf("%s%d", redisutil.KeyStore, id)
+	var cached model.Store
+	if redisutil.CacheGet(ctx, cacheKey, &cached) {
+		return &cached, nil
+	}
+
+	store, err := s.getStoreCached(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	redisutil.CacheSet(ctx, cacheKey, *store, redisutil.TTLStore)
+	return store, nil
 }
 
 func (s *StoreService) List(ctx context.Context, page, pageSize int) (*response.PaginatedData, error) {
@@ -91,7 +110,7 @@ func (s *StoreService) List(ctx context.Context, page, pageSize int) (*response.
 }
 
 func (s *StoreService) Update(ctx context.Context, id uint64, req *request.UpdateStoreRequest) (*response.StoreResponse, error) {
-	store, err := s.storeRepo.GetByID(ctx, id)
+	store, err := s.getStoreCached(ctx, id)
 	if err != nil {
 		return nil, apperror.New(errcode.NotFound)
 	}
@@ -104,28 +123,43 @@ func (s *StoreService) Update(ctx context.Context, id uint64, req *request.Updat
 	if err := s.storeRepo.Update(ctx, store); err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
 	}
+	redisutil.CacheDelete(ctx, fmt.Sprintf("%s%d", redisutil.KeyStore, id))
 	return response.ToStoreResponse(store), nil
 }
 
 func (s *StoreService) UpdateStatus(ctx context.Context, id uint64, status int8) error {
-	if _, err := s.storeRepo.GetByID(ctx, id); err != nil {
+	if _, err := s.getStoreCached(ctx, id); err != nil {
 		return apperror.New(errcode.NotFound)
 	}
-	return s.storeRepo.UpdateStatus(ctx, id, status)
+	if err := s.storeRepo.UpdateStatus(ctx, id, status); err != nil {
+		return err
+	}
+	redisutil.CacheDelete(ctx, fmt.Sprintf("%s%d", redisutil.KeyStore, id))
+	return nil
 }
 
 // Delete soft-deletes a store by ID (sets status to -1).
 func (s *StoreService) Delete(ctx context.Context, id uint64) error {
-	if _, err := s.storeRepo.GetByID(ctx, id); err != nil {
+	if _, err := s.getStoreCached(ctx, id); err != nil {
 		return apperror.New(errcode.NotFound)
 	}
-	return s.storeRepo.UpdateStatus(ctx, id, -1)
+	if err := s.storeRepo.UpdateStatus(ctx, id, -1); err != nil {
+		return err
+	}
+	redisutil.CacheDelete(ctx, fmt.Sprintf("%s%d", redisutil.KeyStore, id))
+	return nil
 }
 
 func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) (*response.CredentialResponse, error) {
-	store, err := s.storeRepo.GetByID(ctx, storeID)
+	store, err := s.getStoreCached(ctx, storeID)
 	if err != nil {
 		return nil, apperror.New(errcode.NotFound)
+	}
+
+	// Invalidate cached credential for old appKey before disabling
+	oldCred, _ := s.credentialRepo.GetByStoreID(ctx, store.ID)
+	if oldCred != nil {
+		redisutil.CacheDelete(ctx, fmt.Sprintf("%s%s", redisutil.KeyCredential, oldCred.AppKey))
 	}
 
 	// Disable old credentials
