@@ -64,35 +64,6 @@ const METHOD_COLORS: Record<string, string> = {
 
 const endpointGroups: EndpointGroup[] = [
   {
-    name: '认证 Auth',
-    icon: '🔐',
-    endpoints: [
-      { method: 'POST', path: '/auth/register', desc: '用户注册', auth: '无', body: { username: '', password: '', member_type: 'issuer', company_name: '', contact_name: '', contact_phone: '', email: '' } },
-      { method: 'POST', path: '/admin/login', desc: '用户登录', auth: '无', body: { username: '', password: '' } },
-      { method: 'POST', path: '/admin/refresh', desc: '刷新令牌', auth: '无', body: { refresh_token: '' } },
-    ],
-  },
-  {
-    name: '个人 Profile',
-    icon: '👤',
-    endpoints: [
-      { method: 'GET', path: '/admin/profile', desc: '获取当前用户信息', auth: 'JWT' },
-      { method: 'PUT', path: '/admin/profile', desc: '更新当前用户信息', auth: 'JWT', body: { company_name: '', contact_name: '', contact_phone: '', email: '' } },
-    ],
-  },
-  {
-    name: '用户管理 Users',
-    icon: '👥',
-    endpoints: [
-      { method: 'GET', path: '/admin/users', desc: '用户列表', auth: 'JWT + manage_users', queryParams: [{ name: 'page', type: 'number', desc: '页码' }, { name: 'page_size', type: 'number', desc: '每页条数' }] },
-      { method: 'GET', path: '/admin/users/:id', desc: '用户详情', auth: 'JWT + manage_users', pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户ID' }] },
-      { method: 'POST', path: '/admin/users/:id/approve', desc: '审批通过用户', auth: 'JWT + manage_users', pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户ID' }], body: { reason: '' } },
-      { method: 'POST', path: '/admin/users/:id/reject', desc: '驳回用户', auth: 'JWT + manage_users', pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户ID' }], body: { reason: '' } },
-      { method: 'POST', path: '/admin/users/:id/suspend', desc: '停用用户', auth: 'JWT + manage_users', pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户ID' }], body: { reason: '' } },
-      { method: 'POST', path: '/admin/users/:id/unsuspend', desc: '启用用户', auth: 'JWT + manage_users', pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户ID' }] },
-    ],
-  },
-  {
     name: '门店管理 Stores',
     icon: '🏪',
     endpoints: [
@@ -146,18 +117,6 @@ const endpointGroups: EndpointGroup[] = [
     endpoints: [
       { method: 'GET', path: '/admin/statistics/overview', desc: '统计概览', auth: 'JWT' },
       { method: 'GET', path: '/admin/statistics/trend', desc: '统计趋势', auth: 'JWT', queryParams: [{ name: 'start_date', type: 'string', desc: '开始日期' }, { name: 'end_date', type: 'string', desc: '结束日期' }] },
-    ],
-  },
-  {
-    name: '应用管理 Apps',
-    icon: '📱',
-    endpoints: [
-      { method: 'GET', path: '/admin/apps', desc: '应用列表', auth: 'JWT + 已审批', queryParams: [{ name: 'page', type: 'number', desc: '页码' }, { name: 'page_size', type: 'number', desc: '每页条数' }] },
-      { method: 'GET', path: '/admin/apps/:id', desc: '应用详情', auth: 'JWT + 已审批', pathParams: [{ name: 'id', type: 'number', required: true, desc: '应用ID' }] },
-      { method: 'POST', path: '/admin/apps', desc: '创建应用', auth: 'JWT + 已审批', body: { name: '', description: '' } },
-      { method: 'PUT', path: '/admin/apps/:id', desc: '更新应用', auth: 'JWT + 已审批', pathParams: [{ name: 'id', type: 'number', required: true, desc: '应用ID' }], body: { name: '', description: '' } },
-      { method: 'DELETE', path: '/admin/apps/:id', desc: '删除应用', auth: 'JWT + 已审批', pathParams: [{ name: 'id', type: 'number', required: true, desc: '应用ID' }] },
-      { method: 'POST', path: '/admin/apps/:id/credentials', desc: '生成应用凭证', auth: 'JWT + 已审批', pathParams: [{ name: 'id', type: 'number', required: true, desc: '应用ID' }] },
     ],
   },
   {
