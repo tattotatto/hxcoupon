@@ -69,7 +69,7 @@ export default function Landing() {
                 ghost={!scrolled}
                 type={scrolled ? 'default' : 'default'}
                 style={scrolled ? {} : { color: '#fff', borderColor: '#fff' }}
-                onClick={() => navigate('/api-docs')}
+                onClick={() => window.open('/api-docs', '_blank')}
               >
                 API 文档
               </Button>
@@ -94,7 +94,7 @@ export default function Landing() {
                 type={scrolled ? 'primary' : 'default'}
                 ghost={!scrolled}
                 style={scrolled ? {} : { color: '#fff', borderColor: '#fff' }}
-                onClick={() => navigate('/api-docs')}
+                onClick={() => window.open('/api-docs', '_blank')}
               >
                 API 文档
               </Button>
@@ -185,7 +185,7 @@ export default function Landing() {
               color: '#fff',
               borderColor: '#fff',
             }}
-            onClick={() => navigate('/api-docs')}
+            onClick={() => window.open('/api-docs', '_blank')}
           >
             查看 API 文档
           </Button>
