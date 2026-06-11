@@ -15,6 +15,7 @@ import CouponRecords from '../pages/coupons/CouponRecords';
 import ConsumeForm from '../pages/coupons/ConsumeForm';
 import ReportDashboard from '../pages/reports/ReportDashboard';
 import ApiDocs from '../pages/ApiDocs';
+import Landing from '../pages/Landing';
 
 const router = createBrowserRouter([
   {
@@ -27,6 +28,10 @@ const router = createBrowserRouter([
   },
   {
     path: '/',
+    element: <Landing />,
+  },
+  {
+    path: '/admin',
     element: (
       <AuthGuard>
         <AdminLayout />
@@ -86,8 +91,11 @@ const router = createBrowserRouter([
           </ApprovalGuard>
         ),
       },
-      { path: 'api-docs', element: <ApiDocs /> },
     ],
+  },
+  {
+    path: '/api-docs',
+    element: <ApiDocs />,
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ]);

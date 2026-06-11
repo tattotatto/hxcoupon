@@ -13,7 +13,7 @@ export default function Login() {
   const location = useLocation();
 
   if (isLoggedIn) {
-    navigate('/', { replace: true });
+    navigate('/admin', { replace: true });
     return null;
   }
 
@@ -23,7 +23,7 @@ export default function Login() {
       await login(values.username, values.password);
       message.success('登录成功');
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      navigate(from !== '/' ? from : '/admin', { replace: true });
     } catch {
       // error toast handled by interceptor
     } finally {

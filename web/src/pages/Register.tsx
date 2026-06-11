@@ -14,7 +14,7 @@ export default function Register() {
   const navigate = useNavigate();
 
   if (isLoggedIn) {
-    navigate('/', { replace: true });
+    navigate('/admin', { replace: true });
     return null;
   }
 
