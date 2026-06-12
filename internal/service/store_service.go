@@ -82,7 +82,7 @@ func (s *StoreService) getStoreCached(ctx context.Context, id uint64) (*model.St
 		return &cached, nil
 	}
 
-	store, err := s.getStoreCached(ctx, id)
+	store, err := s.storeRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
