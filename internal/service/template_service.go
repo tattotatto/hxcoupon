@@ -138,21 +138,43 @@ func (s *TemplateService) List(ctx context.Context, f request.TemplateListReques
 	}, nil
 }
 
-// listByStoreID returns templates assigned to a specific store.
+// listByStoreID returns templates available to a specific store:
+// templates assigned to the store (specific scope) + global templates (all scope).
 func (s *TemplateService) listByStoreID(ctx context.Context, storeID uint64, status *int8) (*response.PaginatedData, error) {
-	templateIDs, err := s.templateStoreRepo.GetTemplateIDsByStoreID(ctx, storeID)
+	// Get store-specific template IDs from junction table
+	storeTemplateIDs, err := s.templateStoreRepo.GetTemplateIDsByStoreID(ctx, storeID)
 	if err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
 	}
 
-	if len(templateIDs) == 0 {
+	// Get global template IDs (applicable_scope = "all")
+	globalTemplateIDs, err := s.templateRepo.GetGlobalTemplateIDs(ctx, status)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	// Merge and deduplicate
+	idSet := make(map[uint64]struct{})
+	for _, id := range storeTemplateIDs {
+		idSet[uint64(id)] = struct{}{}
+	}
+	for _, id := range globalTemplateIDs {
+		idSet[uint64(id)] = struct{}{}
+	}
+
+	if len(idSet) == 0 {
 		return &response.PaginatedData{
 			Total: 0,
 			Items: []response.TemplateResponse{},
 		}, nil
 	}
 
-	templates, err := s.templateRepo.ListByIDs(ctx, templateIDs, status)
+	ids := make([]uint64, 0, len(idSet))
+	for id := range idSet {
+		ids = append(ids, id)
+	}
+
+	templates, err := s.templateRepo.ListByIDs(ctx, ids, status)
 	if err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
 	}

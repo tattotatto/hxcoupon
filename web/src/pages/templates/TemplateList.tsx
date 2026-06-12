@@ -3,6 +3,7 @@ import { Table, Card, Tag, Space, Button, Modal, Form, Input, InputNumber, Selec
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { templateApi } from '../../api/template';
+import { storeApi } from '../../api/store';
 
 const typeMap: Record<string, string> = { full_reduction: '满减', discount: '折扣', fixed_amount: '固定金额' };
 const statusMap: Record<number, { color: string; text: string }> = {
@@ -17,8 +18,10 @@ export default function TemplateList() {
   const [filters, setFilters] = useState<Record<string, any>>({ page: 1, page_size: 20 });
   const [modal, setModal] = useState<{ open: boolean; editing?: any }>({ open: false });
   const [saveLoading, setSaveLoading] = useState(false);
+  const [stores, setStores] = useState<{ id: number; name: string; code: string }[]>([]);
   const [form] = Form.useForm();
   const validityType = Form.useWatch('validity_type', form);
+  const applicableScope = Form.useWatch('applicable_scope', form);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -31,9 +34,13 @@ export default function TemplateList() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    storeApi.options().then(res => setStores(res.data.data || [])).catch(() => {});
+  }, []);
+
   const openCreate = () => {
     form.resetFields();
-    form.setFieldsValue({ stackable: false, max_stack_count: 1, threshold_amount: 0, validity_type: 'fixed_date' });
+    form.setFieldsValue({ stackable: false, max_stack_count: 1, threshold_amount: 0, validity_type: 'fixed_date', applicable_scope: 'all' });
     setModal({ open: true });
   };
 
@@ -170,6 +177,27 @@ export default function TemplateList() {
           <Form.Item name="name" label="模板名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
+          {!modal.editing && (
+            <>
+              <Form.Item name="applicable_scope" label="适用范围" rules={[{ required: true }]}>
+                <Select options={[
+                  { value: 'all', label: '全部门店' },
+                  { value: 'specific', label: '指定门店' },
+                ]} />
+              </Form.Item>
+              {applicableScope === 'specific' && (
+                <Form.Item name="store_ids" label="选择门店" rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一个门店' }]}>
+                  <Select
+                    mode="multiple"
+                    placeholder="选择适用门店"
+                    showSearch
+                    optionFilterProp="label"
+                    options={stores.map(s => ({ value: s.id, label: `${s.name} (${s.code})` }))}
+                  />
+                </Form.Item>
+              )}
+            </>
+          )}
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="type" label="优惠类型" rules={[{ required: true }]}>

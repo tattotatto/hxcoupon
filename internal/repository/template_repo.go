@@ -118,6 +118,17 @@ func (r *TemplateRepo) ListByIDs(ctx context.Context, ids []uint64, status *int8
 	return templates, err
 }
 
+// GetGlobalTemplateIDs returns IDs of templates with applicable_scope = "all", optionally filtered by status.
+func (r *TemplateRepo) GetGlobalTemplateIDs(ctx context.Context, status *int8) ([]uint64, error) {
+	var ids []uint64
+	query := r.db.WithContext(ctx).Model(&model.CouponTemplate{}).Where("applicable_scope = ?", "all")
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	err := query.Pluck("id", &ids).Error
+	return ids, err
+}
+
 func (r *TemplateRepo) Count(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&model.CouponTemplate{}).Count(&count).Error
