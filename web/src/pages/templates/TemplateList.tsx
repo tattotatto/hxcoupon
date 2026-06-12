@@ -177,26 +177,26 @@ export default function TemplateList() {
           <Form.Item name="name" label="模板名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          {!modal.editing && (
-            <>
-              <Form.Item name="applicable_scope" label="适用范围" rules={[{ required: true }]}>
-                <Select options={[
-                  { value: 'all', label: '全部门店' },
-                  { value: 'specific', label: '指定门店' },
-                ]} />
-              </Form.Item>
-              {applicableScope === 'specific' && (
-                <Form.Item name="store_ids" label="选择门店" rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一个门店' }]}>
-                  <Select
-                    mode="multiple"
-                    placeholder="选择适用门店"
-                    showSearch
-                    optionFilterProp="label"
-                    options={stores.map(s => ({ value: s.id, label: `${s.name} (${s.code})` }))}
-                  />
-                </Form.Item>
-              )}
-            </>
+          <Form.Item name="applicable_scope" label="适用范围" rules={[{ required: true }]}>
+            <Select
+              disabled={!!modal.editing}
+              options={[
+                { value: 'all', label: '全部门店' },
+                { value: 'specific', label: '指定门店' },
+              ]}
+            />
+          </Form.Item>
+          {applicableScope === 'specific' && (
+            <Form.Item name="store_ids" label="选择门店" rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一个门店' }]}>
+              <Select
+                mode="multiple"
+                placeholder="选择适用门店"
+                showSearch
+                optionFilterProp="label"
+                disabled={!!modal.editing}
+                options={stores.map(s => ({ value: s.id, label: `${s.name} (${s.code})` }))}
+              />
+            </Form.Item>
           )}
           <Row gutter={16}>
             <Col span={12}>
