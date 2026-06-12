@@ -88,6 +88,7 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 		}
 
 		// Store management (existing routes, JWT only for now)
+		adminGroup.GET("/stores/options", h.AdminStore.Options)
 		adminGroup.GET("/stores", h.AdminStore.List)
 		adminGroup.GET("/stores/:id", h.AdminStore.Get)
 		adminGroup.POST("/stores", h.AdminStore.Create)

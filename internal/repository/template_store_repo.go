@@ -42,3 +42,12 @@ func (r *TemplateStoreRepo) IsStoreApplicable(ctx context.Context, templateID, s
 		Count(&count).Error
 	return count > 0, err
 }
+
+// GetTemplateIDsByStoreID returns all template IDs assigned to a store.
+func (r *TemplateStoreRepo) GetTemplateIDsByStoreID(ctx context.Context, storeID uint64) ([]uint64, error) {
+	var ids []uint64
+	err := r.db.WithContext(ctx).Model(&model.CouponTemplateStore{}).
+		Where("store_id = ?", storeID).
+		Pluck("template_id", &ids).Error
+	return ids, err
+}

@@ -33,6 +33,12 @@ func (h *TemplateHandler) List(c *gin.Context) {
 		s := int8(statusVal)
 		req.Status = &s
 	}
+	if storeIDStr := c.Query("store_id"); storeIDStr != "" {
+		storeIDVal, err := strconv.ParseUint(storeIDStr, 10, 64)
+		if err == nil {
+			req.StoreID = &storeIDVal
+		}
+	}
 
 	data, err := h.templateService.List(c.Request.Context(), req)
 	if err != nil {

@@ -28,7 +28,7 @@ func (h *CouponHandler) Issue(c *gin.Context) {
 		return
 	}
 
-	result, err := h.couponService.Issue(c.Request.Context(), storeID.(uint64), req.TemplateID, req.UserPhone, req.IdempotencyKey)
+	result, err := h.couponService.Issue(c.Request.Context(), storeID.(uint64), req.TemplateID, req.UserPhone)
 	if err != nil {
 		handleError(c, err)
 		return

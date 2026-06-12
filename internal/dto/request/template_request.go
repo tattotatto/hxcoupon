@@ -38,7 +38,8 @@ type UpdateTemplateStatusRequest struct {
 
 type TemplateListRequest struct {
 	Pagination
-	Keyword string `json:"keyword" form:"keyword"`
-	Type    string `json:"type" form:"type"`
-	Status  *int8  `json:"status" form:"status"`
+	StoreID *uint64 `json:"store_id" form:"store_id"`
+	Keyword string  `json:"keyword" form:"keyword"`
+	Type    string  `json:"type" form:"type"`
+	Status  *int8   `json:"status" form:"status"`
 }

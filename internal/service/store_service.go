@@ -139,6 +139,11 @@ func (s *StoreService) UpdateStatus(ctx context.Context, id uint64, status int8)
 	return nil
 }
 
+// ListActive returns all active stores for dropdown selects.
+func (s *StoreService) ListActive(ctx context.Context) ([]model.Store, error) {
+	return s.storeRepo.ListActive(ctx)
+}
+
 // Delete soft-deletes a store by ID (sets status to -1).
 func (s *StoreService) Delete(ctx context.Context, id uint64) error {
 	if _, err := s.getStoreCached(ctx, id); err != nil {

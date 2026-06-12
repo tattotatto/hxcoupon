@@ -104,6 +104,20 @@ func (r *TemplateRepo) IncrementIssued(ctx context.Context, tx *gorm.DB, id uint
 	return nil
 }
 
+// ListByIDs returns templates matching the given IDs, optionally filtered by status.
+func (r *TemplateRepo) ListByIDs(ctx context.Context, ids []uint64, status *int8) ([]model.CouponTemplate, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var templates []model.CouponTemplate
+	query := r.db.WithContext(ctx).Model(&model.CouponTemplate{}).Where("id IN ?", ids)
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	err := query.Order("id DESC").Find(&templates).Error
+	return templates, err
+}
+
 func (r *TemplateRepo) Count(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&model.CouponTemplate{}).Count(&count).Error

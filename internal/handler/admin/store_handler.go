@@ -118,6 +118,26 @@ func (h *StoreHandler) GenerateCredentials(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success(cred))
 }
 
+// Options returns all active stores as a simplified list for dropdown selects.
+func (h *StoreHandler) Options(c *gin.Context) {
+	stores, err := h.storeService.ListActive(c.Request.Context())
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	type storeOption struct {
+		ID   uint64 `json:"id"`
+		Name string `json:"name"`
+		Code string `json:"code"`
+	}
+	items := make([]storeOption, len(stores))
+	for i, s := range stores {
+		items[i] = storeOption{ID: s.ID, Name: s.Name, Code: s.Code}
+	}
+	c.JSON(http.StatusOK, response.Success(items))
+}
+
 // DeleteStore soft-deletes a store.
 func (h *StoreHandler) DeleteStore(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

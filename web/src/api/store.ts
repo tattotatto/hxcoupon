@@ -2,6 +2,7 @@ import client from './client';
 
 export const storeApi = {
   list: (params: Record<string, unknown>) => client.get('/admin/stores', { params }),
+  options: () => client.get('/admin/stores/options'),
   get: (id: number) => client.get(`/admin/stores/${id}`),
   create: (data: Record<string, unknown>) => client.post('/admin/stores', data),
   update: (id: number, data: Record<string, unknown>) => client.put(`/admin/stores/${id}`, data),

@@ -1,11 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, Form, Input, Button, Select, message, Result, Descriptions, Tag } from 'antd';
 import { couponApi } from '../../api/coupon';
+import { storeApi } from '../../api/store';
+import { templateApi } from '../../api/template';
+
+interface StoreOption {
+  id: number;
+  name: string;
+  code: string;
+}
+
+interface TemplateOption {
+  id: number;
+  name: string;
+  type: string;
+  applicable_scope: string;
+}
 
 export default function IssueForm() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [stores, setStores] = useState<StoreOption[]>([]);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | undefined>();
+
+  // Load store options on mount
+  useEffect(() => {
+    storeApi.options().then(res => {
+      setStores(res.data.data || []);
+    }).catch(() => {});
+  }, []);
+
+  // Load templates when store changes
+  const onStoreChange = useCallback(async (storeId: number) => {
+    setSelectedStoreId(storeId);
+    form.setFieldValue('template_id', undefined);
+    setTemplates([]);
+    if (!storeId) return;
+    setTemplatesLoading(true);
+    try {
+      const res = await templateApi.list({ store_id: storeId });
+      setTemplates((res.data.data?.items as TemplateOption[]) || []);
+    } catch { /* handled */ }
+    finally { setTemplatesLoading(false); }
+  }, [form]);
 
   const onFinish = async (values: Record<string, string | number>) => {
     setLoading(true);
@@ -25,7 +65,7 @@ export default function IssueForm() {
           title="发券成功"
           subTitle={`优惠券已成功发放`}
           extra={[
-            <Button key="again" type="primary" onClick={() => { setResult(null); form.resetFields(); }}>继续发券</Button>,
+            <Button key="again" type="primary" onClick={() => { setResult(null); setSelectedStoreId(undefined); setTemplates([]); form.resetFields(); }}>继续发券</Button>,
           ]}
         />
         <Descriptions bordered size="small" style={{ marginTop: 16 }}>
@@ -45,17 +85,33 @@ export default function IssueForm() {
   return (
     <Card title="管理端发券" style={{ borderRadius: 12, maxWidth: 600 }}>
       <Form form={form} layout="vertical" onFinish={onFinish}>
-        <Form.Item name="store_id" label="门店ID" rules={[{ required: true, message: '请选择发券门店' }]}>
-          <Input placeholder="输入门店ID" />
+        <Form.Item name="store_id" label="发券门店" rules={[{ required: true, message: '请选择发券门店' }]}>
+          <Select
+            placeholder="选择门店"
+            showSearch
+            optionFilterProp="label"
+            onChange={onStoreChange}
+            options={stores.map(s => ({
+              value: s.id,
+              label: `${s.name} (${s.code})`,
+            }))}
+          />
         </Form.Item>
-        <Form.Item name="template_id" label="模板ID" rules={[{ required: true, message: '请选择模板' }]}>
-          <Input placeholder="输入模板ID" />
+        <Form.Item name="template_id" label="优惠券模板" rules={[{ required: true, message: '请选择模板' }]}>
+          <Select
+            placeholder={selectedStoreId ? '选择模板' : '请先选择门店'}
+            loading={templatesLoading}
+            showSearch
+            optionFilterProp="label"
+            disabled={!selectedStoreId}
+            options={templates.map(t => ({
+              value: t.id,
+              label: `[${t.id}] ${t.name}`,
+            }))}
+          />
         </Form.Item>
         <Form.Item name="user_phone" label="用户手机号" rules={[{ required: true, message: '请输入用户手机号' }, { max: 20 }]}>
           <Input placeholder="用户手机号" />
-        </Form.Item>
-        <Form.Item name="idempotency_key" label="幂等键" rules={[{ required: true, message: '请输入幂等键' }, { max: 128 }]} tooltip="用于防止重复发券，每次请求需唯一">
-          <Input placeholder="唯一的幂等键，如 UUID" />
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading} size="large">

@@ -100,6 +100,11 @@ func (s *TemplateService) GetByID(ctx context.Context, id uint64) (*response.Tem
 }
 
 func (s *TemplateService) List(ctx context.Context, f request.TemplateListRequest) (*response.PaginatedData, error) {
+	// If store_id is provided, filter templates by the store assignment
+	if f.StoreID != nil {
+		return s.listByStoreID(ctx, *f.StoreID, f.Status)
+	}
+
 	filter := repository.TemplateListFilter{
 		Keyword:  f.Keyword,
 		Type:     f.Type,
@@ -129,6 +134,39 @@ func (s *TemplateService) List(ctx context.Context, f request.TemplateListReques
 		Total:    total,
 		Page:     filter.Page,
 		PageSize: filter.PageSize,
+		Items:    items,
+	}, nil
+}
+
+// listByStoreID returns templates assigned to a specific store.
+func (s *TemplateService) listByStoreID(ctx context.Context, storeID uint64, status *int8) (*response.PaginatedData, error) {
+	templateIDs, err := s.templateStoreRepo.GetTemplateIDsByStoreID(ctx, storeID)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	if len(templateIDs) == 0 {
+		return &response.PaginatedData{
+			Total: 0,
+			Items: []response.TemplateResponse{},
+		}, nil
+	}
+
+	templates, err := s.templateRepo.ListByIDs(ctx, templateIDs, status)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	items := make([]response.TemplateResponse, len(templates))
+	for i, t := range templates {
+		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
+		items[i] = *response.ToTemplateResponse(&t, storeIDs)
+	}
+
+	return &response.PaginatedData{
+		Total:    int64(len(templates)),
+		Page:     1,
+		PageSize: len(templates),
 		Items:    items,
 	}, nil
 }

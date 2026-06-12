@@ -90,9 +90,13 @@ const endpointGroups: EndpointGroup[] = [
         responseExample: { code: 0, message: 'ok', data: { id: 1, name: '旗舰店', description: '品牌旗舰店', status: 1, created_at: '2025-01-01T00:00:00Z' } },
       },
       {
-        method: 'POST', path: '/admin/stores', desc: '创建门店', auth: 'JWT',
-        body: { name: '新门店', description: '门店描述' },
-        responseExample: { code: 0, message: 'ok', data: { id: 2, name: '新门店', description: '门店描述', status: 1 } },
+        method: 'GET', path: '/admin/stores/options', desc: '门店下拉选项', auth: 'JWT',
+        responseExample: { code: 0, message: 'ok', data: [{ id: 1, name: '旗舰店', code: 'ABC12' }] },
+      },
+      {
+        method: 'POST', path: '/admin/stores', desc: '创建门店（编码自动生成）', auth: 'JWT',
+        body: { name: '新门店', app_id: 'wxabc123', type: 'miniprogram' },
+        responseExample: { code: 0, message: 'ok', data: { id: 2, name: '新门店', code: 'XK9M3', app_id: 'wxabc123', type: 'miniprogram', status: 1 } },
       },
       {
         method: 'PUT', path: '/admin/stores/:id', desc: '更新门店', auth: 'JWT',
@@ -127,6 +131,7 @@ const endpointGroups: EndpointGroup[] = [
         queryParams: [
           { name: 'page', type: 'number', desc: '页码' },
           { name: 'page_size', type: 'number', desc: '每页条数' },
+          { name: 'store_id', type: 'number', desc: '按门店ID筛选模板' },
         ],
         responseExample: { code: 0, message: 'ok', data: { total: 1, items: [{ id: 1, name: '满减券模板', coupon_type: 'discount', amount: 10, status: 1 }] } },
       },
@@ -177,9 +182,9 @@ const endpointGroups: EndpointGroup[] = [
     icon: '🎫',
     endpoints: [
       {
-        method: 'POST', path: '/admin/coupons/issue', desc: '发放优惠券', auth: 'JWT + 已审批',
-        body: { template_id: 1, store_id: 1, user_id: 'user_001', quantity: 1 },
-        responseExample: { code: 0, message: 'ok', data: { coupons: [{ code: 'COUPON_ABC123', template_id: 1, user_id: 'user_001', status: 'issued' }] } },
+        method: 'POST', path: '/admin/coupons/issue', desc: '发放优惠券（幂等键自动生成）', auth: 'JWT + 已审批',
+        body: { store_id: 1, template_id: 1, user_phone: '13800138000' },
+        responseExample: { code: 0, message: 'ok', data: { coupon_id: 1, coupon_code: 'ABC12DEF34GH', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', status: 'unused' } },
       },
       {
         method: 'GET', path: '/admin/coupons/records', desc: '发券记录列表', auth: 'JWT + 已审批',
@@ -260,9 +265,9 @@ const endpointGroups: EndpointGroup[] = [
     icon: '🔗',
     endpoints: [
       {
-        method: 'POST', path: '/coupons/issue', desc: '发放优惠券 (HMAC)', auth: 'HMAC + 频率限制',
-        body: { template_id: 1, user_id: 'user_001', quantity: 1 },
-        responseExample: { code: 0, message: 'ok', data: { coupons: [{ code: 'COUPON_XYZ789', template_id: 1, user_id: 'user_001', status: 'issued' }] } },
+        method: 'POST', path: '/coupons/issue', desc: '发放优惠券（幂等键自动生成）', auth: 'HMAC + 频率限制',
+        body: { template_id: 1, user_phone: '13800138000' },
+        responseExample: { code: 0, message: 'ok', data: { coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', status: 'unused' } },
       },
       {
         method: 'GET', path: '/coupons/available', desc: '查询可用优惠券 (HMAC)', auth: 'HMAC + 频率限制',

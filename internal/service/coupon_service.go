@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -47,8 +49,10 @@ func NewCouponService(
 	}
 }
 
-// Issue issues a coupon to a user. Idempotent via idempotency_key.
-func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templateID uint64, userPhone, idempotencyKey string) (*response.CouponIssueResponse, error) {
+// Issue issues a coupon to a user. Idempotent via auto-generated idempotency_key.
+func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templateID uint64, userPhone string) (*response.CouponIssueResponse, error) {
+	// Generate idempotency key server-side
+	idempotencyKey := s.generateIdempotencyKey()
 	// Check idempotency first (outside transaction for performance)
 	existing, err := s.instanceRepo.GetByIdempotencyKey(ctx, sourceStoreID, idempotencyKey)
 	if err == nil && existing != nil {
@@ -755,6 +759,22 @@ func (s *CouponService) ListConsumeRecords(ctx context.Context, page, pageSize i
 		PageSize: pageSize,
 		Items:    items,
 	}, nil
+}
+
+// generateIdempotencyKey creates a UUID v4-style idempotency key.
+func (s *CouponService) generateIdempotencyKey() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	// Set version 4 and variant bits
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%s-%s-%s-%s-%s",
+		hex.EncodeToString(b[0:4]),
+		hex.EncodeToString(b[4:6]),
+		hex.EncodeToString(b[6:8]),
+		hex.EncodeToString(b[8:10]),
+		hex.EncodeToString(b[10:16]),
+	)
 }
 
 func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstance) (*response.CouponDetailResponse, error) {

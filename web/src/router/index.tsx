@@ -94,7 +94,7 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: '/api-docs',
+    path: '/docs',
     element: <ApiDocs />,
   },
   { path: '*', element: <Navigate to="/" replace /> },
