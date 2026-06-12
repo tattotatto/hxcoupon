@@ -101,7 +101,7 @@ func (s *AdminUserService) ApproveUser(ctx context.Context, userID uint64, opera
 		return apperror.New(errcode.NotFound)
 	}
 	if user.ApprovalStatus != model.ApprovalPending {
-		return apperror.NewWithMsg(errcode.InvalidParams, "user is not in pending status")
+		return apperror.NewWithMsg(errcode.InvalidParams, fmt.Sprintf("user is not in pending status (current: %s)", approvalStatusName(user.ApprovalStatus)))
 	}
 
 	now := time.Now()
@@ -139,7 +139,7 @@ func (s *AdminUserService) RejectUser(ctx context.Context, userID uint64, operat
 		return apperror.New(errcode.NotFound)
 	}
 	if user.ApprovalStatus != model.ApprovalPending {
-		return apperror.NewWithMsg(errcode.InvalidParams, "user is not in pending status")
+		return apperror.NewWithMsg(errcode.InvalidParams, fmt.Sprintf("user is not in pending status (current: %s)", approvalStatusName(user.ApprovalStatus)))
 	}
 
 	if err := s.adminRepo.UpdateFields(ctx, userID, map[string]interface{}{
@@ -372,6 +372,21 @@ func (s *AdminUserService) createCredentials(ctx context.Context, storeID uint64
 	}
 
 	return s.credRepo.Create(ctx, cred)
+}
+
+func approvalStatusName(status int8) string {
+	switch status {
+	case model.ApprovalPending:
+		return "pending"
+	case model.ApprovalApproved:
+		return "approved"
+	case model.ApprovalRejected:
+		return "rejected"
+	case model.ApprovalSuspended:
+		return "suspended"
+	default:
+		return "unknown"
+	}
 }
 
 func generateStoreCode() string {

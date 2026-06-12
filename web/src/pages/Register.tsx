@@ -22,7 +22,7 @@ export default function Register() {
     setLoading(true);
     try {
       const res = await authApi.register(values as any);
-      setResult(res.data.data);
+      setResult({ ...res.data.data, member_type: values.member_type });
       message.success('注册成功');
     } catch {
       // handled by interceptor
@@ -44,9 +44,13 @@ export default function Register() {
       >
         <Card style={{ width: 480, borderRadius: 12, textAlign: 'center' }}>
           <Title level={3} style={{ color: '#52c41a' }}>注册成功</Title>
-          <Text>您的账号 <strong>{result.username}</strong> 已提交审核。</Text>
+          <Text>您的账号 <strong>{result.username}</strong> 注册成功。</Text>
           <br />
-          <Text type="secondary">请等待管理员审批后即可登录使用。</Text>
+          {result.member_type === 'consumer' ? (
+            <Text type="success">核销方账号已自动激活，可直接登录使用。</Text>
+          ) : (
+            <Text type="secondary">请等待管理员审批后即可登录使用。</Text>
+          )}
           <div style={{ marginTop: 24 }}>
             <Space>
               <Link to="/login">
