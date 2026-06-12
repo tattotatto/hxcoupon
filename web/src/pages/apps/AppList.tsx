@@ -137,9 +137,6 @@ export default function AppList() {
           </Form.Item>
           {!modal.editing && (
             <>
-              <Form.Item name="code" label="编码" rules={[{ required: true, len: 5, pattern: /^[a-zA-Z0-9]+$/ }]}>
-                <Input maxLength={5} />
-              </Form.Item>
               <Form.Item name="app_id" label="App ID" rules={[{ required: true, max: 64 }]}>
                 <Input />
               </Form.Item>

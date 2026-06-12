@@ -2,7 +2,6 @@ package request
 
 type CreateStoreRequest struct {
 	Name         string `json:"name" validate:"required,max=128"`
-	Code         string `json:"code" validate:"required,len=5,alphanum"`
 	AppID        string `json:"app_id" validate:"required,max=64"`
 	Type         string `json:"type" validate:"required,oneof=miniprogram h5"`
 	ContactName  string `json:"contact_name" validate:"max=64"`

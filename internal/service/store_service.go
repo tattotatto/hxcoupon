@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
 	"hxcoupon/internal/dto/request"
 	"hxcoupon/internal/dto/response"
@@ -29,15 +30,15 @@ func NewStoreService(db *gorm.DB, storeRepo *repository.StoreRepo, credRepo *rep
 }
 
 func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreRequest) (*response.StoreWithCredentialsResponse, error) {
-	// Validate store code uniqueness
-	existing, _ := s.storeRepo.GetByCode(ctx, req.Code)
-	if existing != nil {
-		return nil, apperror.NewWithMsg(errcode.InvalidParams, "store code already exists")
+	// Auto-generate unique 5-char alphanumeric store code
+	code, err := s.generateStoreCode(ctx)
+	if err != nil {
+		return nil, apperror.NewWithMsg(errcode.InternalError, "failed to generate store code")
 	}
 
 	store := &model.Store{
 		Name:         req.Name,
-		Code:         req.Code,
+		Code:         code,
 		AppID:        req.AppID,
 		Type:         req.Type,
 		Status:       1,
@@ -206,4 +207,31 @@ func (s *StoreService) generateCredentials(ctx context.Context, storeID uint64) 
 	}
 
 	return appKey, rawSecret, nil
+}
+
+// generateStoreCode generates a unique 5-character alphanumeric code.
+// It retries up to 10 times on collision.
+func (s *StoreService) generateStoreCode(ctx context.Context) (string, error) {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	const codeLen = 5
+	const maxRetries = 10
+
+	for i := 0; i < maxRetries; i++ {
+		code := make([]byte, codeLen)
+		for j := range code {
+			n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+			if err != nil {
+				return "", err
+			}
+			code[j] = charset[n.Int64()]
+		}
+		codeStr := string(code)
+
+		existing, _ := s.storeRepo.GetByCode(ctx, codeStr)
+		if existing == nil {
+			return codeStr, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to generate unique store code after %d retries", maxRetries)
 }
