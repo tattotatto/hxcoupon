@@ -137,8 +137,8 @@ export default function AppList() {
           </Form.Item>
           {!modal.editing && (
             <>
-              <Form.Item name="app_id" label="App ID" rules={[{ required: true, max: 64 }]}>
-                <Input />
+              <Form.Item name="app_id" label="App ID" rules={[{ max: 64 }]} tooltip="可选，留空则自动生成">
+                <Input placeholder="留空自动生成" />
               </Form.Item>
               <Form.Item name="type" label="类型" rules={[{ required: true }]}>
                 <Select options={[{ value: 'miniprogram', label: '小程序' }, { value: 'h5', label: 'H5' }]} />

@@ -29,16 +29,26 @@ func NewStoreService(db *gorm.DB, storeRepo *repository.StoreRepo, credRepo *rep
 }
 
 func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreRequest, userID *uint64) (*response.StoreWithCredentialsResponse, error) {
-	// Auto-generate unique 5-char alphanumeric store code
+	// Auto-generate unique store code and app_id
 	code, err := s.generateStoreCode(ctx)
 	if err != nil {
 		return nil, apperror.NewWithMsg(errcode.InternalError, "failed to generate store code")
+	}
+	appID := req.AppID
+	if appID == "" {
+		appID = code // fallback: use store code as app_id
+	}
+
+	// Check AppID uniqueness
+	existing, _ := s.storeRepo.GetByAppID(ctx, appID)
+	if existing != nil {
+		return nil, apperror.NewWithMsg(errcode.InvalidParams, "app_id already exists")
 	}
 
 	store := &model.Store{
 		Name:         req.Name,
 		Code:         code,
-		AppID:        req.AppID,
+		AppID:        appID,
 		Type:         req.Type,
 		Status:       1,
 		UserID:       userID,

@@ -96,7 +96,7 @@ const endpointGroups: EndpointGroup[] = [
       },
       {
         method: 'POST', path: '/admin/stores', desc: '创建门店（编码自动生成）', auth: 'JWT',
-        body: { name: '新门店', app_id: 'wxabc123', type: 'miniprogram', contact_name: '张三', contact_phone: '13800138000', remark: '' },
+        body: { name: '新门店', app_id: '', type: 'miniprogram', contact_name: '张三', contact_phone: '13800138000', remark: '' },
         responseExample: { code: 0, message: 'success', data: { id: 2, name: '新门店', code: 'XK9M3', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '', contact_phone: '', remark: '', credentials: { app_key: 'ak_xxx', app_secret: 'sk_xxx' } } },
       },
       {
