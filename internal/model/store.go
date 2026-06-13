@@ -14,8 +14,8 @@ type Store struct {
 	ContactName  string    `gorm:"type:varchar(64)" json:"contact_name"`
 	ContactPhone string    `gorm:"type:varchar(20)" json:"contact_phone"`
 	Remark       string    `gorm:"type:varchar(512)" json:"remark"`
-	MpAppID      *string   `gorm:"type:varchar(64);default:null" json:"mp_appid"`
-	MpPagePath   *string   `gorm:"type:varchar(256);default:null" json:"mp_page_path"`
+	MpAppID      *string   `gorm:"column:mp_appid;type:varchar(64);default:null" json:"mp_appid"`
+	MpPagePath   *string   `gorm:"column:mp_page_path;type:varchar(256);default:null" json:"mp_page_path"`
 	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
