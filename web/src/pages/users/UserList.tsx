@@ -13,7 +13,7 @@ const approvalMap: Record<number, { color: string; text: string }> = {
 
 const memberTypeMap: Record<string, string> = {
   issuer: '发券方',
-  consumer: '核销方',
+  consumer: '用券方',
   both: '综合',
 };
 

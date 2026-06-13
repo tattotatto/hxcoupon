@@ -47,7 +47,7 @@ export default function Register() {
           <Text>您的账号 <strong>{result.username}</strong> 注册成功。</Text>
           <br />
           {result.member_type === 'consumer' ? (
-            <Text type="success">核销方账号已自动激活，可直接登录使用。</Text>
+            <Text type="success">用券方账号已自动激活，可直接登录使用。</Text>
           ) : (
             <Text type="secondary">请等待管理员审批后即可登录使用。</Text>
           )}
@@ -117,9 +117,9 @@ export default function Register() {
             <Select
               placeholder="选择商家类型"
               options={[
-                { value: 'issuer', label: '发券方 — 可创建模板并发券' },
-                { value: 'consumer', label: '核销方 — 可核销优惠券' },
-                { value: 'both', label: '综合商家 — 发券 + 核销' },
+                { value: 'issuer', label: '发券方 — 向用户发放优惠券' },
+                { value: 'consumer', label: '用券方 — 创建模板并提供核销' },
+                { value: 'both', label: '综合商家 — 发券 + 用券' },
               ]}
             />
           </Form.Item>
