@@ -96,13 +96,18 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 		adminGroup.PATCH("/stores/:id/status", h.AdminStore.UpdateStatus)
 		adminGroup.POST("/stores/:id/credentials", h.AdminStore.GenerateCredentials)
 
-		// Template management (existing routes)
+		// Template management
 		adminGroup.GET("/templates", h.AdminTemplate.List)
 		adminGroup.GET("/templates/:id", h.AdminTemplate.Get)
-		adminGroup.POST("/templates", h.AdminTemplate.Create)
-		adminGroup.PUT("/templates/:id", h.AdminTemplate.Update)
-		adminGroup.PATCH("/templates/:id/status", h.AdminTemplate.UpdateStatus)
-		adminGroup.DELETE("/templates/:id", h.AdminTemplate.Delete)
+		// Template write operations require manage_templates permission (用券方/综合 only)
+		templateWrite := adminGroup.Group("")
+		templateWrite.Use(middleware.RequirePermission("manage_templates"))
+		{
+			templateWrite.POST("/templates", h.AdminTemplate.Create)
+			templateWrite.PUT("/templates/:id", h.AdminTemplate.Update)
+			templateWrite.PATCH("/templates/:id/status", h.AdminTemplate.UpdateStatus)
+			templateWrite.DELETE("/templates/:id", h.AdminTemplate.Delete)
+		}
 
 		// Statistics (existing routes)
 		adminGroup.GET("/statistics/overview", h.AdminStatistics.Overview)

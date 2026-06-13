@@ -38,9 +38,9 @@ func hasMemberPermission(memberType *string, perm string) bool {
 	case model.MemberTypeBoth:
 		return true
 	case model.MemberTypeIssuer:
-		return perm == model.PermIssueCoupons || perm == model.PermManageTemplates || perm == model.PermManageStores
+		return perm == model.PermIssueCoupons || perm == model.PermManageStores
 	case model.MemberTypeConsumer:
-		return perm == model.PermConsumeCoupons || perm == model.PermManageStores
+		return perm == model.PermConsumeCoupons || perm == model.PermManageTemplates || perm == model.PermManageStores || perm == model.PermViewReports
 	default:
 		return false
 	}

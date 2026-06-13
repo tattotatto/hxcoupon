@@ -4,6 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant
 import dayjs from 'dayjs';
 import { templateApi } from '../../api/template';
 import { storeApi } from '../../api/store';
+import { useAuthStore } from '../../stores/authStore';
 
 const typeMap: Record<string, string> = { full_reduction: '满减', discount: '折扣', fixed_amount: '固定金额' };
 const statusMap: Record<number, { color: string; text: string }> = {
@@ -13,6 +14,8 @@ const statusMap: Record<number, { color: string; text: string }> = {
 };
 
 export default function TemplateList() {
+  const memberType = useAuthStore((s) => s.user?.member_type);
+  const canManage = memberType !== 'issuer'; // 只有用券方和综合商家能管理模板
   const [data, setData] = useState<{ items: any[]; total: number }>({ items: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<Record<string, any>>({ page: 1, page_size: 20 });
@@ -115,25 +118,25 @@ export default function TemplateList() {
       title: '操作', key: 'actions', fixed: 'right' as const, width: 240,
       render: (_: any, record: any) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
-          {record.status === 0 && (
+          {canManage && <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>}
+          {canManage && record.status === 0 && (
             <Popconfirm title="确认发布？" onConfirm={() => handleStatus(record.id, 1)}>
               <Button type="link" size="small" style={{ color: '#52c41a' }}>发布</Button>
             </Popconfirm>
           )}
-          {record.status === 1 && (
+          {canManage && record.status === 1 && (
             <Popconfirm title="确认停用？" onConfirm={() => handleStatus(record.id, 2)}>
               <Button type="link" size="small" style={{ color: '#faad14' }}>停用</Button>
             </Popconfirm>
           )}
-          {record.status === 2 && (
+          {canManage && record.status === 2 && (
             <Popconfirm title="确认发布？" onConfirm={() => handleStatus(record.id, 1)}>
               <Button type="link" size="small" style={{ color: '#52c41a' }}>重新发布</Button>
             </Popconfirm>
           )}
-          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
+          {canManage && <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-          </Popconfirm>
+          </Popconfirm>}
         </Space>
       ),
     },
@@ -143,7 +146,7 @@ export default function TemplateList() {
     <>
       <Card style={{ borderRadius: 12 }}>
         <Space style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增模板</Button>
+          {canManage && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增模板</Button>}
           <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
         </Space>
 
