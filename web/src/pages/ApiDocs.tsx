@@ -83,12 +83,12 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码，默认1' },
           { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ id: 1, name: '旗舰店', description: '品牌旗舰店', status: 1, created_at: '2025-01-01T00:00:00Z' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, name: '旗舰店', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '' }] } },
       },
       {
         method: 'GET', path: '/admin/stores/:id', desc: '门店详情', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '门店ID' }],
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '旗舰店', description: '品牌旗舰店', status: 1, created_at: '2025-01-01T00:00:00Z' } },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '旗舰店', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '' } },
       },
       {
         method: 'GET', path: '/admin/stores/options', desc: '门店下拉选项', auth: 'JWT',
@@ -96,14 +96,14 @@ const endpointGroups: EndpointGroup[] = [
       },
       {
         method: 'POST', path: '/admin/stores', desc: '创建门店（编码自动生成）', auth: 'JWT',
-        body: { name: '新门店', app_id: 'wxabc123', type: 'miniprogram' },
-        responseExample: { code: 0, message: 'success', data: { id: 2, name: '新门店', code: 'XK9M3', app_id: 'wxabc123', type: 'miniprogram', status: 1 } },
+        body: { name: '新门店', app_id: 'wxabc123', type: 'miniprogram', contact_name: '张三', contact_phone: '13800138000', remark: '' },
+        responseExample: { code: 0, message: 'success', data: { id: 2, name: '新门店', code: 'XK9M3', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '', contact_phone: '', remark: '', credentials: { app_key: 'ak_xxx', app_secret: 'sk_xxx' } } },
       },
       {
         method: 'PUT', path: '/admin/stores/:id', desc: '更新门店', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '门店ID' }],
-        body: { name: '更新名称', description: '更新描述' },
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '更新名称', description: '更新描述' } },
+        body: { name: '更新名称', contact_name: '张三', contact_phone: '13800138000', remark: '' },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '更新名称', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '' } },
       },
       {
         method: 'PATCH', path: '/admin/stores/:id/status', desc: '更新门店状态', auth: 'JWT',
@@ -119,7 +119,7 @@ const endpointGroups: EndpointGroup[] = [
       {
         method: 'POST', path: '/admin/stores/:id/credentials', desc: '生成门店凭证', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '门店ID' }],
-        responseExample: { code: 0, message: 'success', data: { app_key: 'ak_xxxxxxxxxxxx', app_secret: 'sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', store_id: 1 } },
+        responseExample: { code: 0, message: 'success', data: { app_key: 'ak_xxxxxxxxxxxx', app_secret: 'sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' } },
       },
     ],
   },
@@ -134,23 +134,23 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page_size', type: 'number', desc: '每页条数' },
           { name: 'store_id', type: 'number', desc: '按门店ID筛选模板' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ id: 1, name: '满减券模板', coupon_type: 'discount', amount: 10, status: 1 }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', stackable: false, max_stack_count: 1, validity_type: 'days_after_receive', validity_days: 30, total_quantity: 100, issued_count: 0, per_user_limit: 1, status: 1, created_at: '2025-01-01T00:00:00Z' }] } },
       },
       {
         method: 'GET', path: '/admin/templates/:id', desc: '模板详情', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '模板ID' }],
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '满减券模板', coupon_type: 'discount', amount: 10, description: '满100减10', status: 1 } },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', store_ids: [], stackable: false, max_stack_count: 1, validity_type: 'days_after_receive', validity_days: 30, valid_start: null, valid_end: null, total_quantity: 100, issued_count: 0, per_user_limit: 1, product_restriction: null, status: 1, created_at: '2025-01-01T00:00:00Z' } },
       },
       {
         method: 'POST', path: '/admin/templates', desc: '创建模板', auth: 'JWT',
-        body: { name: '新模板', description: '', coupon_type: 'discount', amount: 10 },
-        responseExample: { code: 0, message: 'success', data: { id: 2, name: '新模板', coupon_type: 'discount', amount: 10 } },
+        body: { name: '满50减20', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', stackable: false, max_stack_count: 1, validity_type: 'days_after_receive', validity_days: 30, total_quantity: 100, per_user_limit: 1 },
+        responseExample: { code: 0, message: 'success', data: { id: 2, name: '满50减20', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', store_ids: [], stackable: false, max_stack_count: 1, validity_type: 'days_after_receive', validity_days: 30, total_quantity: 100, issued_count: 0, per_user_limit: 1, status: 0, created_at: '2025-01-01T00:00:00Z' } },
       },
       {
-        method: 'PUT', path: '/admin/templates/:id', desc: '更新模板', auth: 'JWT',
+        method: 'PUT', path: '/admin/templates/:id', desc: '更新模板（仅草稿状态可编辑）', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '模板ID' }],
-        body: { name: '更新模板名', description: '' },
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '更新模板名' } },
+        body: { name: '满50减30', discount_value: 30, threshold_amount: 50, stackable: false, max_stack_count: 1, validity_days: 30, valid_start: '', valid_end: '', total_quantity: 200, per_user_limit: 2 },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '满50减30', type: 'full_reduction', discount_value: 30, threshold_amount: 50, applicable_scope: 'all', stackable: false, max_stack_count: 1, validity_type: 'days_after_receive', validity_days: 30, total_quantity: 200, issued_count: 0, per_user_limit: 2, status: 0, created_at: '2025-01-01T00:00:00Z' } },
       },
       {
         method: 'PATCH', path: '/admin/templates/:id/status', desc: '更新模板状态', auth: 'JWT',
@@ -169,12 +169,12 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码' },
           { name: 'page_size', type: 'number', desc: '每页条数' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ id: 1, name: '满减券模板', coupon_type: 'discount', amount: 10 }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', stackable: false, validity_type: 'days_after_receive', validity_days: 30, total_quantity: 100, issued_count: 0, per_user_limit: 1, status: 1 }] } },
       },
       {
         method: 'GET', path: '/admin/browse/templates/:id', desc: '浏览模板详情', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '模板ID' }],
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '满减券模板', coupon_type: 'discount', amount: 10, description: '满100减10' } },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', store_ids: [], stackable: false, max_stack_count: 1, validity_type: 'days_after_receive', validity_days: 30, valid_start: null, valid_end: null, total_quantity: 100, issued_count: 0, per_user_limit: 1, product_restriction: null, status: 1, created_at: '2025-01-01T00:00:00Z' } },
       },
     ],
   },
@@ -195,12 +195,12 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'store_id', type: 'number', desc: '按门店筛选' },
           { name: 'status', type: 'string', desc: '按状态筛选' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ id: 1, coupon_code: 'COUPON_ABC123', template_name: '满减券', store_name: '旗舰店', user_id: 'user_001', status: 'issued', issued_at: '2025-01-01T12:00:00Z' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, coupon_code: 'ABC12DEF34GH', template_name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, user_phone: '13800138000', status: 'unused', source_store_name: '旗舰店', receive_time: '2025-01-01T12:00:00Z', use_time: null }] } },
       },
       {
         method: 'GET', path: '/admin/coupons/records/:id', desc: '发券记录详情', auth: 'JWT + 已审批',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '记录ID' }],
-        responseExample: { code: 0, message: 'success', data: { id: 1, coupon_code: 'COUPON_ABC123', template_name: '满减券', store_name: '旗舰店', user_id: 'user_001', status: 'issued', issued_at: '2025-01-01T12:00:00Z' } },
+        responseExample: { code: 0, message: 'success', data: { coupon_id: 1, coupon_code: 'ABC12DEF34GH', template_name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, status: 'unused', user_phone: '13800138000', source_store_name: '旗舰店', valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', receive_time: '2025-01-01T12:00:00Z', use_time: null, used_at_store_name: '', use_order_id: '', records: [] } },
       },
       {
         method: 'POST', path: '/admin/coupons/consume', desc: '核销优惠券', auth: 'JWT + 已审批',
@@ -213,7 +213,7 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码' },
           { name: 'page_size', type: 'number', desc: '每页条数' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ id: 1, coupon_code: 'COUPON_ABC123', store_name: '旗舰店', used_at: '2025-01-01T14:00:00Z' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, coupon_id: 1, user_phone: '13800138000', store_name: '旗舰店', action: 'consume', order_info: { order_id: 'ORD_001', order_amount: 199 }, created_at: '2025-01-01T14:00:00Z' }] } },
       },
     ],
   },
@@ -223,23 +223,23 @@ const endpointGroups: EndpointGroup[] = [
     endpoints: [
       {
         method: 'GET', path: '/admin/reports/overview', desc: '报表概览', auth: 'JWT + 已审批',
-        responseExample: { code: 0, message: 'success', data: { total_issued: 1000, total_used: 650, usage_rate: 0.65, today_used: 12 } },
+        responseExample: { code: 0, message: 'success', data: { total_stores: 5, total_templates: 10, total_issued: 1000, total_used: 650, usage_rate: 0.65, today_issued: 25, today_used: 12 } },
       },
       {
         method: 'GET', path: '/admin/reports/trend', desc: '趋势数据', auth: 'JWT + 已审批',
         queryParams: [
-          { name: 'start_date', type: 'string', desc: '开始日期 (YYYY-MM-DD)' },
-          { name: 'end_date', type: 'string', desc: '结束日期 (YYYY-MM-DD)' },
+          { name: 'start_date', type: 'string', desc: '开始日期 (YYYY-MM-DD)', required: true },
+          { name: 'end_date', type: 'string', desc: '结束日期 (YYYY-MM-DD)', required: true },
         ],
-        responseExample: { code: 0, message: 'success', data: [{ date: '2025-01-01', issued: 30, used: 20 }, { date: '2025-01-02', issued: 45, used: 32 }] },
+        responseExample: { code: 0, message: 'success', data: { items: [{ date: '2025-01-01', issued: 30, used: 20 }, { date: '2025-01-02', issued: 45, used: 32 }] } },
       },
       {
-        method: 'GET', path: '/admin/reports/export/coupons', desc: '导出券数据CSV', auth: 'JWT + 已审批',
-        responseExample: { code: 0, message: 'success', data: 'file: coupons_20250101.csv' },
+        method: 'GET', path: '/admin/reports/export/coupons', desc: '导出券数据CSV文件', auth: 'JWT + 已审批',
+        responseExample: { code: 0, message: 'success', data: { note: '返回 CSV 文件下载流' } },
       },
       {
-        method: 'GET', path: '/admin/reports/export/usage', desc: '导出核销数据CSV', auth: 'JWT + 已审批',
-        responseExample: { code: 0, message: 'success', data: 'file: usage_20250101.csv' },
+        method: 'GET', path: '/admin/reports/export/usage', desc: '导出核销数据CSV文件', auth: 'JWT + 已审批',
+        responseExample: { code: 0, message: 'success', data: { note: '返回 CSV 文件下载流' } },
       },
     ],
   },
@@ -249,7 +249,7 @@ const endpointGroups: EndpointGroup[] = [
     endpoints: [
       {
         method: 'GET', path: '/admin/statistics/overview', desc: '统计概览', auth: 'JWT',
-        responseExample: { code: 0, message: 'success', data: { total_stores: 5, total_templates: 10, total_coupons_issued: 1000, total_coupons_used: 650 } },
+        responseExample: { code: 0, message: 'success', data: { total_stores: 5, total_templates: 10, total_issued: 1000, total_used: 650, usage_rate: 0.65, today_issued: 25, today_used: 12 } },
       },
       {
         method: 'GET', path: '/admin/statistics/trend', desc: '统计趋势', auth: 'JWT',
