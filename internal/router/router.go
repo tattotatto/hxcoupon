@@ -47,7 +47,7 @@ func NewHandlers(svc *Services) *Handlers {
 		AdminUser:       admin.NewUserHandler(svc.AdminUser),
 		AdminReport:     admin.NewReportHandler(svc.Report),
 		AdminCoupon:     admin.NewCouponHandler(svc.Coupon),
-		OpenCoupon:      openapi.NewCouponHandler(svc.Coupon),
+		OpenCoupon:      openapi.NewCouponHandler(svc.Coupon, svc.Template),
 	}
 }
 
@@ -162,6 +162,11 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 	openGroup := api.Group("/coupons")
 	openGroup.Use(storeAuthMW)
 	{
+		openGroup.GET("/templates",
+			middleware.RateLimit("rl:query", 300, 1*time.Minute),
+			h.OpenCoupon.ListTemplates,
+		)
+
 		openGroup.POST("/issue",
 			middleware.RateLimit("rl:issue", 100, 1*time.Minute),
 			h.OpenCoupon.Issue,

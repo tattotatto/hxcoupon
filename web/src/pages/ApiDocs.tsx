@@ -266,6 +266,14 @@ const endpointGroups: EndpointGroup[] = [
     icon: '🔗',
     endpoints: [
       {
+        method: 'GET', path: '/coupons/templates', desc: '浏览可发券模板', auth: 'HMAC + 频率限制',
+        queryParams: [
+          { name: 'page', type: 'number', desc: '页码，默认1' },
+          { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
+        ],
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, applicable_scope: 'all', stackable: false, validity_type: 'days_after_receive', validity_days: 30, total_quantity: 100, per_user_limit: 1, status: 1 }] } },
+      },
+      {
         method: 'POST', path: '/coupons/issue', desc: '发放优惠券（幂等键自动生成）', auth: 'HMAC + 频率限制',
         body: { template_id: 1, user_phone: '13800138000' },
         responseExample: { code: 0, message: 'success', data: { coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', status: 'unused' } },

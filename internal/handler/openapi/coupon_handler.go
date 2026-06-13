@@ -12,11 +12,12 @@ import (
 )
 
 type CouponHandler struct {
-	couponService *service.CouponService
+	couponService   *service.CouponService
+	templateService *service.TemplateService
 }
 
-func NewCouponHandler(couponService *service.CouponService) *CouponHandler {
-	return &CouponHandler{couponService: couponService}
+func NewCouponHandler(couponService *service.CouponService, templateService *service.TemplateService) *CouponHandler {
+	return &CouponHandler{couponService: couponService, templateService: templateService}
 }
 
 func (h *CouponHandler) Issue(c *gin.Context) {
@@ -102,6 +103,19 @@ func (h *CouponHandler) ListByUser(c *gin.Context) {
 	}
 
 	data, err := h.couponService.ListByUser(c.Request.Context(), userPhone, status, page, pageSize)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, response.Success(data))
+}
+
+// ListTemplates returns all published templates for coupon issuers to browse.
+func (h *CouponHandler) ListTemplates(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	data, err := h.templateService.ListPublished(c.Request.Context(), page, pageSize)
 	if err != nil {
 		handleError(c, err)
 		return
