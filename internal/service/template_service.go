@@ -87,7 +87,9 @@ func (s *TemplateService) Create(ctx context.Context, req *request.CreateTemplat
 	redisutil.CacheSet(ctx, fmt.Sprintf("%s%d", redisutil.KeyTemplate, t.ID), *t, redisutil.TTLTemplate)
 
 	storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
-	return response.ToTemplateResponse(t, storeIDs), nil
+	resp := response.ToTemplateResponse(t, storeIDs)
+	s.fillMpInfo(ctx, resp, t)
+	return resp, nil
 }
 
 func (s *TemplateService) GetByID(ctx context.Context, id uint64) (*response.TemplateResponse, error) {
@@ -96,7 +98,9 @@ func (s *TemplateService) GetByID(ctx context.Context, id uint64) (*response.Tem
 		return nil, apperror.New(errcode.NotFound)
 	}
 	storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, id)
-	return response.ToTemplateResponse(t, storeIDs), nil
+	resp := response.ToTemplateResponse(t, storeIDs)
+	s.fillMpInfo(ctx, resp, t)
+	return resp, nil
 }
 
 func (s *TemplateService) List(ctx context.Context, f request.TemplateListRequest) (*response.PaginatedData, error) {
@@ -128,6 +132,7 @@ func (s *TemplateService) List(ctx context.Context, f request.TemplateListReques
 	for i, t := range templates {
 		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 		items[i] = *response.ToTemplateResponse(&t, storeIDs)
+			s.fillMpInfo(ctx, &items[i], &t)
 	}
 
 	return &response.PaginatedData{
@@ -183,6 +188,7 @@ func (s *TemplateService) listByStoreID(ctx context.Context, storeID uint64, sta
 	for i, t := range templates {
 		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 		items[i] = *response.ToTemplateResponse(&t, storeIDs)
+			s.fillMpInfo(ctx, &items[i], &t)
 	}
 
 	return &response.PaginatedData{
@@ -217,6 +223,7 @@ func (s *TemplateService) ListPublished(ctx context.Context, page, pageSize int)
 	for i, t := range templates {
 		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 		items[i] = *response.ToTemplateResponse(&t, storeIDs)
+			s.fillMpInfo(ctx, &items[i], &t)
 	}
 
 	return &response.PaginatedData{
@@ -269,7 +276,9 @@ func (s *TemplateService) Update(ctx context.Context, id uint64, req *request.Up
 	s.invalidateTemplateCache(ctx, id)
 
 	storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, id)
-	return response.ToTemplateResponse(t, storeIDs), nil
+	resp := response.ToTemplateResponse(t, storeIDs)
+	s.fillMpInfo(ctx, resp, t)
+	return resp, nil
 }
 
 func (s *TemplateService) UpdateStatus(ctx context.Context, id uint64, status int8) error {
@@ -355,4 +364,38 @@ func (s *TemplateService) GetApplicableStoreID(ctx context.Context, templateID u
 // GetSourceStoreID returns the store_id from the template's first applicable store for code generation
 func (s *TemplateService) GetSourceStoreID(ctx context.Context, templateID uint64) (uint64, error) {
 	return s.GetApplicableStoreID(ctx, templateID)
+}
+
+// fillMpInfo populates the mini-program fields on a TemplateResponse.
+func (s *TemplateService) fillMpInfo(ctx context.Context, resp *response.TemplateResponse, t *model.CouponTemplate) {
+	resp.MpAppID, resp.MpPagePath = s.ResolveMpInfo(ctx, t)
+}
+
+// ResolveMpInfo returns the mini-program AppID and page path for a template's first applicable store.
+func (s *TemplateService) ResolveMpInfo(ctx context.Context, t *model.CouponTemplate) (mpAppID, mpPagePath string) {
+	var storeIDs []uint64
+	if t.ApplicableScope == "specific" {
+		storeIDs, _ = s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
+	}
+	if len(storeIDs) == 0 {
+		stores, err := s.storeRepo.ListActive(ctx)
+		if err == nil && len(stores) > 0 {
+			storeIDs = []uint64{stores[0].ID}
+		}
+	}
+
+	for _, sid := range storeIDs {
+		store, err := s.storeRepo.GetByID(ctx, sid)
+		if err != nil {
+			continue
+		}
+		if store.MpAppID != nil && *store.MpAppID != "" {
+			mpAppID = *store.MpAppID
+			if store.MpPagePath != nil {
+				mpPagePath = *store.MpPagePath
+			}
+			return
+		}
+	}
+	return "", ""
 }

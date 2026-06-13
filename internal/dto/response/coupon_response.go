@@ -27,8 +27,6 @@ type CouponAvailableResponse struct {
 	ThresholdAmount float64   `json:"threshold_amount"`
 	ValidEnd        time.Time `json:"valid_end"`
 	Stackable       bool      `json:"stackable"`
-	MpAppID         string    `json:"mp_appid,omitempty"`
-	MpPagePath      string    `json:"mp_page_path,omitempty"`
 }
 
 type CouponConsumeResponse struct {
@@ -62,8 +60,6 @@ type CouponDetailResponse struct {
 	UseTime         *time.Time               `json:"use_time"`
 	UsedAtStoreName string                   `json:"used_at_store_name"`
 	UseOrderID      string                   `json:"use_order_id"`
-	MpAppID         string                   `json:"mp_appid,omitempty"`
-	MpPagePath      string                   `json:"mp_page_path,omitempty"`
 	Records         []CouponUsageRecordBrief `json:"records"`
 }
 

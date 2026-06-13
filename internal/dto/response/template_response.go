@@ -25,6 +25,8 @@ type TemplateResponse struct {
 	PerUserLimit       uint            `json:"per_user_limit"`
 	ProductRestriction json.RawMessage `json:"product_restriction"`
 	Status             int8            `json:"status"`
+	MpAppID            string          `json:"mp_appid,omitempty"`
+	MpPagePath         string          `json:"mp_page_path,omitempty"`
 	CreatedAt          time.Time       `json:"created_at"`
 }
 
