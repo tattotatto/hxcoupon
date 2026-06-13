@@ -115,6 +115,35 @@ func (s *StoreService) List(ctx context.Context, page, pageSize int) (*response.
 	}, nil
 }
 
+// ListByUser returns stores owned by a specific user.
+func (s *StoreService) ListByUser(ctx context.Context, userID uint64, page, pageSize int) (*response.PaginatedData, error) {
+	stores, total, err := s.storeRepo.ListByUserID(ctx, userID, page, pageSize)
+	if err != nil {
+		return nil, apperror.NewWithErr(errcode.InternalError, err)
+	}
+
+	items := make([]response.StoreResponse, len(stores))
+	for i, s := range stores {
+		items[i] = *response.ToStoreResponse(&s)
+	}
+
+	return &response.PaginatedData{
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		Items:    items,
+	}, nil
+}
+
+// VerifyStoreOwnership checks that a store belongs to the given user.
+func (s *StoreService) VerifyStoreOwnership(ctx context.Context, storeID, userID uint64) error {
+	store, err := s.storeRepo.GetByIDAndUser(ctx, storeID, userID)
+	if err != nil || store == nil {
+		return apperror.New(errcode.Forbidden)
+	}
+	return nil
+}
+
 func (s *StoreService) Update(ctx context.Context, id uint64, req *request.UpdateStoreRequest) (*response.StoreResponse, error) {
 	store, err := s.getStoreCached(ctx, id)
 	if err != nil {

@@ -70,6 +70,32 @@ func (r *StoreRepo) UpdateStatus(ctx context.Context, id uint64, status int8) er
 	return r.db.WithContext(ctx).Model(&model.Store{}).Where("id = ?", id).Update("status", status).Error
 }
 
+// ListByUserID returns stores owned by a specific user, with pagination.
+func (r *StoreRepo) ListByUserID(ctx context.Context, userID uint64, page, pageSize int) ([]model.Store, int64, error) {
+	var stores []model.Store
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&model.Store{}).Where("user_id = ?", userID)
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	err := query.Order("id DESC").Offset(offset).Limit(pageSize).Find(&stores).Error
+	return stores, total, err
+}
+
+// GetByIDAndUser returns a store only if it belongs to the given user.
+func (r *StoreRepo) GetByIDAndUser(ctx context.Context, id, userID uint64) (*model.Store, error) {
+	var store model.Store
+	err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).First(&store).Error
+	if err != nil {
+		return nil, err
+	}
+	return &store, nil
+}
+
 func (r *StoreRepo) ListActive(ctx context.Context) ([]model.Store, error) {
 	var stores []model.Store
 	err := r.db.WithContext(ctx).Where("status = 1").Find(&stores).Error

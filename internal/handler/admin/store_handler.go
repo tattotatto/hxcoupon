@@ -24,6 +24,19 @@ func (h *StoreHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
+	// Members only see their own stores
+	role, _ := c.Get("admin_role")
+	if role == "member" {
+		userID, _ := c.Get("admin_user_id")
+		data, err := h.storeService.ListByUser(c.Request.Context(), userID.(uint64), page, pageSize)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, response.Success(data))
+		return
+	}
+
 	data, err := h.storeService.List(c.Request.Context(), page, pageSize)
 	if err != nil {
 		handleError(c, err)
@@ -32,10 +45,28 @@ func (h *StoreHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success(data))
 }
 
+// guardOwnership aborts if the current user is a member and does not own the store.
+func (h *StoreHandler) guardOwnership(c *gin.Context, storeID uint64) bool {
+	role, _ := c.Get("admin_role")
+	if role != "member" {
+		return true
+	}
+	userID, _ := c.Get("admin_user_id")
+	if err := h.storeService.VerifyStoreOwnership(c.Request.Context(), storeID, userID.(uint64)); err != nil {
+		c.JSON(http.StatusForbidden, response.Error(40300, "access denied: not your store"))
+		return false
+	}
+	return true
+}
+
 func (h *StoreHandler) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	if !h.guardOwnership(c, id) {
 		return
 	}
 
@@ -69,6 +100,10 @@ func (h *StoreHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if !h.guardOwnership(c, id) {
+		return
+	}
+
 	var req request.UpdateStoreRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, err.Error()))
@@ -90,6 +125,10 @@ func (h *StoreHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
+	if !h.guardOwnership(c, id) {
+		return
+	}
+
 	var req request.UpdateStoreStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, err.Error()))
@@ -107,6 +146,10 @@ func (h *StoreHandler) GenerateCredentials(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	if !h.guardOwnership(c, id) {
 		return
 	}
 
@@ -143,6 +186,10 @@ func (h *StoreHandler) DeleteStore(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	if !h.guardOwnership(c, id) {
 		return
 	}
 
