@@ -552,7 +552,56 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
   csLines.push('Console.WriteLine(result);');
   const cs = csLines.join('\n');
 
-  return { curl, js, py, go, php, cs };
+  // Java
+  const javaLines: string[] = [];
+  javaLines.push('import javax.crypto.Mac;');
+  javaLines.push('import javax.crypto.spec.SecretKeySpec;');
+  javaLines.push('import java.net.URI;');
+  javaLines.push('import java.net.http.*;');
+  javaLines.push('import java.time.Instant;');
+  javaLines.push('import java.util.Base64;');
+  javaLines.push('import java.util.UUID;');
+  javaLines.push('');
+  if (isHMAC) {
+    javaLines.push('// generate HMAC headers with signRequest() (see HMAC section)');
+  }
+  javaLines.push('var client = HttpClient.newHttpClient();');
+  javaLines.push('');
+  if (hasBody && bodyObj) {
+    javaLines.push('var body = """');
+    javaLines.push(JSON.stringify(bodyObj, null, 2));
+    javaLines.push('""";');
+  }
+  javaLines.push('var timestamp = String.valueOf(Instant.now().getEpochSecond());');
+  javaLines.push('var nonce = UUID.randomUUID().toString();');
+  if (hasBody && bodyObj) {
+    javaLines.push('var signingStr = "' + method + '" + "\\n" + "' + fullPath + '" + "\\n" + timestamp + "\\n" + nonce + "\\n" + body;');
+  } else {
+    javaLines.push('var signingStr = "' + method + '" + "\\n" + "' + fullPath + '" + "\\n" + timestamp + "\\n" + nonce + "\\n";');
+  }
+  javaLines.push('var mac = Mac.getInstance("HmacSHA256");');
+  javaLines.push('mac.init(new SecretKeySpec(appSecret.getBytes(), "HmacSHA256"));');
+  javaLines.push('var signature = Base64.getEncoder().encodeToString(mac.doFinal(signingStr.getBytes()));');
+  javaLines.push('');
+  javaLines.push('var request = HttpRequest.newBuilder()');
+  javaLines.push('    .uri(URI.create("' + BASE_DOMAIN + BASE_URL + fullPath + '"))');
+  javaLines.push('    .header("X-App-Key", appKey)');
+  javaLines.push('    .header("X-Timestamp", timestamp)');
+  javaLines.push('    .header("X-Nonce", nonce)');
+  javaLines.push('    .header("X-Signature", signature)');
+  javaLines.push('    .header("Content-Type", "application/json")');
+  if (hasBody && bodyObj) {
+    javaLines.push('    .method("' + method + '", HttpRequest.BodyPublishers.ofString(body))');
+  } else {
+    javaLines.push('    .GET()');
+  }
+  javaLines.push('    .build();');
+  javaLines.push('');
+  javaLines.push('var response = client.send(request, HttpResponse.BodyHandlers.ofString());');
+  javaLines.push('System.out.println(response.body());');
+  const java = javaLines.join('\n');
+
+  return { curl, js, py, go, php, cs, java };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────
@@ -1165,6 +1214,42 @@ public static Dictionary<string, string> SignRequest(
                                 </pre>
                               ),
                             },
+                            {
+                              key: 'hmac-java',
+                              label: 'Java',
+                              children: (
+                                <pre style={codeBlockStyle}>
+{`import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.UUID;
+
+public static Map<String, String> signRequest(
+        String method, String path, String body,
+        String appKey, String appSecret) throws Exception {
+    var timestamp = String.valueOf(Instant.now().getEpochSecond());
+    var nonce = UUID.randomUUID().toString();
+
+    var signingStr = method + "\\n" + path + "\\n" +
+        timestamp + "\\n" + nonce + "\\n" + body;
+
+    var mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(appSecret.getBytes(), "HmacSHA256"));
+    var signature = Base64.getEncoder()
+        .encodeToString(mac.doFinal(signingStr.getBytes()));
+
+    return Map.of(
+        "X-App-Key", appKey,
+        "X-Timestamp", timestamp,
+        "X-Nonce", nonce,
+        "X-Signature", signature,
+        "Content-Type", "application/json"
+    );
+}`}
+                                </pre>
+                              ),
+                            },
                           ]}
                         />
                       </div>
@@ -1246,6 +1331,18 @@ public static Dictionary<string, string> SignRequest(
                                   <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyCode(codeSamples.cs)}>复制</Button>
                                 </div>
                                 <pre style={codeBlockStyle}>{codeSamples.cs}</pre>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: 'java',
+                            label: 'Java',
+                            children: (
+                              <div>
+                                <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyCode(codeSamples.java)}>复制</Button>
+                                </div>
+                                <pre style={codeBlockStyle}>{codeSamples.java}</pre>
                               </div>
                             ),
                           },

@@ -17,8 +17,9 @@ const BASE_DOMAIN = 'https://coupon.mx.yn.cn';
 function buildExamples(templateId: number) {
   const body = JSON.stringify({ template_id: templateId, user_phone: '13800138000' }, null, 2);
   const path = '/api/v1/coupons/issue';
+  const fullUrl = `${BASE_DOMAIN}${path}`;
 
-  const curl = `curl -X POST "${BASE_DOMAIN}${path}" \\
+  const curl = `curl -X POST "${fullUrl}" \\
   -H "X-App-Key: YOUR_APP_KEY" \\
   -H "X-Timestamp: $(date +%s)" \\
   -H "X-Nonce: $(uuidgen)" \\
@@ -26,10 +27,10 @@ function buildExamples(templateId: number) {
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ template_id: templateId, user_phone: '13800138000' })}'`;
 
-  const js = `// 先调用 signRequest() 生成 HMAC 签名头
+  const js = `// generate HMAC headers with signRequest()
 const headers = signRequest('POST', '${path}', ${JSON.stringify({ template_id: templateId, user_phone: '13800138000' })}, appKey, appSecret);
 
-fetch('${BASE_DOMAIN}${path}', {
+fetch('${fullUrl}', {
   method: 'POST',
   headers,
   body: JSON.stringify({ template_id: ${templateId}, user_phone: '13800138000' }),
@@ -40,10 +41,109 @@ fetch('${BASE_DOMAIN}${path}', {
   const py = `import requests
 
 headers = sign_request('POST', '${path}', {"template_id": ${templateId}, "user_phone": "13800138000"}, app_key, app_secret)
-resp = requests.post('${BASE_DOMAIN}${path}', json={"template_id": ${templateId}, "user_phone": "13800138000"}, headers=headers)
+resp = requests.post('${fullUrl}', json={"template_id": ${templateId}, "user_phone": "13800138000"}, headers=headers)
 print(resp.json())`;
 
-  return { curl, js, py, body, path };
+  const go = `import (
+    "bytes"
+    "encoding/json"
+    "net/http"
+)
+
+body := map[string]interface{}{
+    "template_id": ${templateId},
+    "user_phone":   "13800138000",
+}
+bodyJSON, _ := json.Marshal(body)
+
+req, _ := http.NewRequest("POST", "${fullUrl}", bytes.NewBuffer(bodyJSON))
+// headers := SignRequest("POST", "${path}", string(bodyJSON), appKey, appSecret)
+// for k, v := range headers { req.Header.Set(k, v) }
+req.Header.Set("Content-Type", "application/json")
+
+client := &http.Client{}
+resp, _ := client.Do(req)
+defer resp.Body.Close()
+// read resp.Body...`;
+
+  const php = `<?php
+$body = json_encode(["template_id" => ${templateId}, "user_phone" => "13800138000"]);
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, '${fullUrl}');
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    // Use sign_request() to generate headers
+    // 'X-App-Key: YOUR_APP_KEY',
+    // 'X-Timestamp: ' . $timestamp,
+    // 'X-Nonce: ' . $nonce,
+    // 'X-Signature: ' . $signature,
+    'Content-Type: application/json',
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+curl_close($ch);
+
+echo $response;`;
+
+  const cs = `using System.Net.Http;
+using System.Text;
+using Newtonsoft.Json;
+
+var client = new HttpClient();
+var body = new { template_id = ${templateId}, user_phone = "13800138000" };
+var content = new StringContent(
+    JsonConvert.SerializeObject(body),
+    Encoding.UTF8, "application/json");
+
+// var headers = SignRequest("POST", "${path}", content, appKey, appSecret);
+// foreach (var h in headers) client.DefaultRequestHeaders.Add(h.Key, h.Value);
+
+var response = await client.PostAsync("${fullUrl}", content);
+var result = await response.Content.ReadAsStringAsync();
+Console.WriteLine(result);`;
+
+  const java = `import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.net.URI;
+import java.net.http.*;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.UUID;
+
+var client = HttpClient.newHttpClient();
+var body = """
+{
+  "template_id": ${templateId},
+  "user_phone": "13800138000"
+}
+""";
+
+var timestamp = String.valueOf(Instant.now().getEpochSecond());
+var nonce = UUID.randomUUID().toString();
+var signingStr = "POST" + "\\n" + "${path}" + "\\n"
+    + timestamp + "\\n" + nonce + "\\n" + body;
+
+var mac = Mac.getInstance("HmacSHA256");
+mac.init(new SecretKeySpec(appSecret.getBytes(), "HmacSHA256"));
+var signature = Base64.getEncoder()
+    .encodeToString(mac.doFinal(signingStr.getBytes()));
+
+var request = HttpRequest.newBuilder()
+    .uri(URI.create("${fullUrl}"))
+    .header("X-App-Key", appKey)
+    .header("X-Timestamp", timestamp)
+    .header("X-Nonce", nonce)
+    .header("X-Signature", signature)
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .build();
+
+var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(response.body());`;
+
+  return { curl, js, py, go, php, cs, java, body, path };
 }
 
 export default function TemplateBrowse() {
@@ -272,6 +372,66 @@ Content-Type: application/json
                         </div>
                       ),
                     },
+                    {
+                      key: 'go',
+                      label: 'Go',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.go); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.go}
+                          </pre>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'php',
+                      label: 'PHP',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.php); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.php}
+                          </pre>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'cs',
+                      label: 'C#',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.cs); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.cs}
+                          </pre>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'java',
+                      label: 'Java',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.java); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.java}
+                          </pre>
+                        </div>
+                      ),
+                    },
                   ]}
                 />
               </Card>
@@ -280,7 +440,7 @@ Content-Type: application/json
               <Card size="small" title="集成步骤" style={{ marginTop: 16, background: '#fffbe6' }}>
                 <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 2 }}>
                   <li>在「门店管理」→「密钥」获取 <Text code>AppKey</Text> 和 <Text code>AppSecret</Text></li>
-                  <li>参考 API 文档实现 HMAC 签名算法（5 种语言示例）</li>
+                  <li>参考 API 文档实现 HMAC 签名算法（cURL / JS / Python / Go / PHP / C# / Java）</li>
                   <li>问卷/活动页面用户提交手机号后，调用本接口发券</li>
                   {selected.mp_appid && (
                     <li>在用户优惠券列表中使用 <Text code>mp_appid</Text>={<Text code>{selected.mp_appid}</Text>} 和 <Text code>mp_page_path</Text>={<Text code>{selected.mp_page_path || '/'}</Text>} 实现「去用券」按钮跳转</li>
