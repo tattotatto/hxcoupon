@@ -9,7 +9,7 @@ const { Title, Text } = Typography;
 
 export default function Register() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ id: number; username: string; message: string } | null>(null);
+  const [result, setResult] = useState<{ id: number; username: string; message: string; member_type?: string } | null>(null);
   const { isLoggedIn } = useAuthStore();
   const navigate = useNavigate();
 
