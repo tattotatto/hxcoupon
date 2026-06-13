@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Tag, Typography, Spin, Empty, Pagination, Space } from 'antd';
+import { Row, Col, Card, Tag, Typography, Spin, Empty, Pagination, Space, Modal, Tabs, Button, message } from 'antd';
+import { CopyOutlined, CodeOutlined } from '@ant-design/icons';
 import { templateApi } from '../../api/template';
 import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const typeMap: Record<string, { label: string; color: string }> = {
   full_reduction: { label: '满减', color: 'blue' },
@@ -11,11 +12,46 @@ const typeMap: Record<string, { label: string; color: string }> = {
   fixed_amount: { label: '固定金额', color: 'green' },
 };
 
+const BASE_DOMAIN = 'https://coupon.mx.yn.cn';
+
+function buildExamples(templateId: number) {
+  const body = JSON.stringify({ template_id: templateId, user_phone: '13800138000' }, null, 2);
+  const path = '/api/v1/coupons/issue';
+
+  const curl = `curl -X POST "${BASE_DOMAIN}${path}" \\
+  -H "X-App-Key: YOUR_APP_KEY" \\
+  -H "X-Timestamp: $(date +%s)" \\
+  -H "X-Nonce: $(uuidgen)" \\
+  -H "X-Signature: <GENERATED_SIGNATURE>" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify({ template_id: templateId, user_phone: '13800138000' })}'`;
+
+  const js = `// 先调用 signRequest() 生成 HMAC 签名头
+const headers = signRequest('POST', '${path}', ${JSON.stringify({ template_id: templateId, user_phone: '13800138000' })}, appKey, appSecret);
+
+fetch('${BASE_DOMAIN}${path}', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({ template_id: ${templateId}, user_phone: '13800138000' }),
+})
+  .then(r => r.json())
+  .then(data => console.log(data));`;
+
+  const py = `import requests
+
+headers = sign_request('POST', '${path}', {"template_id": ${templateId}, "user_phone": "13800138000"}, app_key, app_secret)
+resp = requests.post('${BASE_DOMAIN}${path}', json={"template_id": ${templateId}, "user_phone": "13800138000"}, headers=headers)
+print(resp.json())`;
+
+  return { curl, js, py, body, path };
+}
+
 export default function TemplateBrowse() {
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ page: 1, page_size: 12 });
+  const [selected, setSelected] = useState<any>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -29,10 +65,12 @@ export default function TemplateBrowse() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const examples = selected ? buildExamples(selected.id) : null;
+
   return (
     <Spin spinning={loading}>
       <div>
-        <Title level={4} style={{ marginBottom: 24 }}>模板浏览</Title>
+        <Title level={4} style={{ marginBottom: 24 }}>模板浏览 — 选择一个模板查看发券接口</Title>
         {items.length === 0 && !loading ? (
           <Empty description="暂无可用模板" />
         ) : (
@@ -51,6 +89,7 @@ export default function TemplateBrowse() {
                           <Text strong>{item.name}</Text>
                         </Space>
                       }
+                      onClick={() => setSelected(item)}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                         <div>
@@ -69,6 +108,7 @@ export default function TemplateBrowse() {
                         <div>有效期: {item.validity_type === 'days_after_receive'
                           ? `领取后${item.validity_days}天`
                           : `${item.valid_start ? dayjs(item.valid_start).format('MM/DD') : ''} - ${item.valid_end ? dayjs(item.valid_end).format('MM/DD') : ''}`}</div>
+                        <div style={{ marginTop: 4, color: '#1677ff', fontSize: 12 }}>点击查看发券接口 →</div>
                       </div>
                     </Card>
                   </Col>
@@ -87,6 +127,167 @@ export default function TemplateBrowse() {
             )}
           </>
         )}
+
+        {/* Issue API Guide Modal */}
+        <Modal
+          open={!!selected}
+          onCancel={() => setSelected(null)}
+          title={selected ? `发券接口 — ${selected.name}` : ''}
+          width={700}
+          footer={null}
+        >
+          {selected && examples && (
+            <div>
+              {/* Template Summary */}
+              <Card size="small" style={{ marginBottom: 16, background: '#f0f5ff' }}>
+                <Space wrap>
+                  <Tag color={typeMap[selected.type]?.color}>{typeMap[selected.type]?.label}</Tag>
+                  <Text strong>优惠:</Text>
+                  <Text style={{ color: '#f5222d', fontSize: 18, fontWeight: 600 }}>
+                    {selected.type === 'discount' ? `${(selected.discount_value / 10).toFixed(1)}折` : `¥${selected.discount_value}`}
+                  </Text>
+                  <Text strong>门槛: ¥{selected.threshold_amount}</Text>
+                  <Text strong>模板ID:</Text>
+                  <Tag>{selected.id}</Tag>
+                </Space>
+                {selected.mp_appid && (
+                  <div style={{ marginTop: 8 }}>
+                    <Text type="secondary">跳转小程序: </Text>
+                    <Text code>{selected.mp_appid}</Text>
+                    <Text type="secondary"> 路径: </Text>
+                    <Text code>{selected.mp_page_path || '/'}</Text>
+                  </div>
+                )}
+              </Card>
+
+              {/* API Info */}
+              <div style={{ marginBottom: 16 }}>
+                <Space>
+                  <Tag color="#1677ff" style={{ fontSize: 14, padding: '4px 12px' }}>POST</Tag>
+                  <Text code style={{ fontSize: 14 }}>{BASE_DOMAIN}/api/v1/coupons/issue</Text>
+                  <Button size="small" icon={<CopyOutlined />}
+                    onClick={() => { navigator.clipboard.writeText(`${BASE_DOMAIN}/api/v1/coupons/issue`); message.success('已复制'); }} />
+                </Space>
+              </div>
+
+              <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                使用你门店的 <Text code>AppKey</Text> 和 <Text code>AppSecret</Text> 生成 HMAC 签名，
+                请求体中 <Text code>template_id</Text> 已预填为 <Tag>{selected.id}</Tag>，
+                <Text code>user_phone</Text> 替换为领券用户的手机号。
+              </Paragraph>
+
+              {/* HMAC Auth Headers */}
+              <Card size="small" title="请求头 (HMAC 签名)" style={{ marginBottom: 16 }}>
+                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 12, margin: 0 }}>
+{`X-App-Key: YOUR_APP_KEY
+X-Timestamp: 当前Unix时间戳
+X-Nonce: 随机UUID
+X-Signature: Base64(HMAC-SHA256(AppSecret, 签名串))
+Content-Type: application/json
+
+签名串 = HTTP方法 + "\\n" + URL路径 + "\\n" + Timestamp + "\\n" + Nonce + "\\n" + 请求体JSON`}
+                </pre>
+              </Card>
+
+              {/* Request Body */}
+              <Card size="small" title="请求体" extra={
+                <Button size="small" icon={<CopyOutlined />}
+                  onClick={() => { navigator.clipboard.writeText(examples.body); message.success('已复制'); }}>复制</Button>
+              } style={{ marginBottom: 16 }}>
+                <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 6, fontSize: 13, margin: 0 }}>
+                  {examples.body}
+                </pre>
+              </Card>
+
+              {/* Expected Response */}
+              <Card size="small" title="预期返回" style={{ marginBottom: 16 }}>
+                <pre style={{ background: '#f6ffed', padding: 12, borderRadius: 6, border: '1px solid #b7eb8f', fontSize: 12, margin: 0 }}>
+{`{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "coupon_id": 1,
+    "coupon_code": "XXX...",
+    "template_name": "${selected.name}",
+    "type": "${selected.type}",
+    "discount_value": ${selected.discount_value},
+    "threshold_amount": ${selected.threshold_amount},
+    "valid_start": "...",
+    "valid_end": "...",
+    "status": "unused"
+  }
+}`}
+                </pre>
+              </Card>
+
+              {/* Code Examples */}
+              <Card size="small" title={<Space><CodeOutlined />代码示例</Space>}>
+                <Tabs
+                  size="small"
+                  items={[
+                    {
+                      key: 'curl',
+                      label: 'cURL',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.curl); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.curl}
+                          </pre>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'js',
+                      label: 'JavaScript',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.js); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.js}
+                          </pre>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'py',
+                      label: 'Python',
+                      children: (
+                        <div>
+                          <div style={{ textAlign: 'right', marginBottom: 4 }}>
+                            <Button size="small" icon={<CopyOutlined />}
+                              onClick={() => { navigator.clipboard.writeText(examples.py); message.success('已复制'); }}>复制</Button>
+                          </div>
+                          <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: 11, lineHeight: 1.6, margin: 0, overflow: 'auto' }}>
+                            {examples.py}
+                          </pre>
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+
+              {/* Steps */}
+              <Card size="small" title="集成步骤" style={{ marginTop: 16, background: '#fffbe6' }}>
+                <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 2 }}>
+                  <li>在「门店管理」→「密钥」获取 <Text code>AppKey</Text> 和 <Text code>AppSecret</Text></li>
+                  <li>参考 API 文档实现 HMAC 签名算法（5 种语言示例）</li>
+                  <li>问卷/活动页面用户提交手机号后，调用本接口发券</li>
+                  {selected.mp_appid && (
+                    <li>在用户优惠券列表中使用 <Text code>mp_appid</Text>={<Text code>{selected.mp_appid}</Text>} 和 <Text code>mp_page_path</Text>={<Text code>{selected.mp_page_path || '/'}</Text>} 实现「去用券」按钮跳转</li>
+                  )}
+                </ol>
+              </Card>
+            </div>
+          )}
+        </Modal>
       </div>
     </Spin>
   );
