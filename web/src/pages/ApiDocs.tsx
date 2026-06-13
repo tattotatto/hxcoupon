@@ -68,6 +68,7 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 const BASE_URL = '/api/v1';
+const BASE_DOMAIN = 'https://coupon.mx.yn.cn';
 
 // ─── Endpoint data ──────────────────────────────────────────────────────
 
@@ -351,7 +352,7 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
   if (hasBody && bodyObj) {
     cUrlParts.push(`-d '${JSON.stringify(bodyObj)}'`);
   }
-  cUrlParts.push(`"${BASE_URL}${fullPath}"`);
+  cUrlParts.push(`"${BASE_DOMAIN}${BASE_URL}${fullPath}"`);
   const curl = cUrlParts.join(' \\\n  ');
 
   // JavaScript (fetch)
@@ -359,7 +360,7 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
   if (isHMAC) {
     jsLines.push(`// 需要先调用 signRequest() 生成签名头（见下方 HMAC 签名示例）`, '');
   }
-  jsLines.push(`fetch('${BASE_URL}${fullPath}', {`);
+  jsLines.push(`fetch('${BASE_DOMAIN}${BASE_URL}${fullPath}', {`);
   jsLines.push(`  method: '${method}',`);
   if (!isHMAC && token) {
     jsLines.push(`  headers: { 'Authorization': 'Bearer ${token}', 'Content-Type': 'application/json' },`);
@@ -395,7 +396,7 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
     pyLines.push(`data = ${JSON.stringify(bodyObj, null, 2).split('\n').map(l => l).join('\n')}`);
     pyLines.push('');
   }
-  pyLines.push(`resp = requests.${method.toLowerCase()}('${BASE_URL}${fullPath}'${hasBody && bodyObj ? ', json=data' : ''}, headers=headers)`);
+  pyLines.push(`resp = requests.${method.toLowerCase()}('${BASE_DOMAIN}${BASE_URL}${fullPath}'${hasBody && bodyObj ? ', json=data' : ''}, headers=headers)`);
   pyLines.push('print(resp.json())');
   const py = pyLines.join('\n');
 
@@ -416,7 +417,7 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
     goLines.push('bodyJSON, _ := json.Marshal(body)');
     goLines.push('');
   }
-  goLines.push(`url := "https://your-domain.com${BASE_URL}${fullPath}"`);
+  goLines.push(`url := "${BASE_DOMAIN}${BASE_URL}${fullPath}"`);
   if (hasBody && bodyObj) {
     goLines.push('req, _ := http.NewRequest("' + method + '", url, bytes.NewBuffer(bodyJSON))');
   } else {
@@ -452,7 +453,7 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
     phpLines.push('');
   }
   phpLines.push('$ch = curl_init();');
-  phpLines.push(`curl_setopt($ch, CURLOPT_URL, '${BASE_URL}${fullPath}');`);
+  phpLines.push(`curl_setopt($ch, CURLOPT_URL, '${BASE_DOMAIN}${BASE_URL}${fullPath}');`);
   phpLines.push(`curl_setopt($ch, CURLOPT_CUSTOMREQUEST, '${method}');`);
   phpLines.push('curl_setopt($ch, CURLOPT_HTTPHEADER, [');
   if (!isHMAC && token) {
@@ -521,15 +522,15 @@ function generateCode(method: string, urlPath: string, pathParams: Record<string
   const csMethodLower = method.toLowerCase();
   if (hasBody && bodyObj) {
     if (csMethodLower === 'post') {
-      csLines.push(`var response = await client.PostAsync("https://your-domain.com${BASE_URL}${fullPath}", content);`);
+      csLines.push(`var response = await client.PostAsync("${BASE_DOMAIN}${BASE_URL}${fullPath}", content);`);
     } else if (csMethodLower === 'put') {
-      csLines.push(`var response = await client.PutAsync("https://your-domain.com${BASE_URL}${fullPath}", content);`);
+      csLines.push(`var response = await client.PutAsync("${BASE_DOMAIN}${BASE_URL}${fullPath}", content);`);
     } else {
-      csLines.push(`var request = new HttpRequestMessage(HttpMethod.${method}, "https://your-domain.com${BASE_URL}${fullPath}") { Content = content };`);
+      csLines.push(`var request = new HttpRequestMessage(HttpMethod.${method}, "${BASE_DOMAIN}${BASE_URL}${fullPath}") { Content = content };`);
       csLines.push('var response = await client.SendAsync(request);');
     }
   } else {
-    csLines.push(`var response = await client.GetAsync("https://your-domain.com${BASE_URL}${fullPath}");`);
+    csLines.push(`var response = await client.GetAsync("${BASE_DOMAIN}${BASE_URL}${fullPath}");`);
   }
   csLines.push('var result = await response.Content.ReadAsStringAsync();');
   csLines.push('Console.WriteLine(result);');
@@ -776,7 +777,7 @@ export default function ApiDocs() {
                           value={urlPath}
                           onChange={(e) => setUrlPath(e.target.value)}
                           placeholder="/admin/..."
-                          addonBefore="/api/v1"
+                          addonBefore={`${BASE_DOMAIN}/api/v1`}
                           style={{ fontFamily: 'monospace' }}
                         />
                         <Button type="primary" icon={<SendOutlined />} loading={loading} onClick={handleSend}>
