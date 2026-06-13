@@ -85,7 +85,16 @@ func (h *StoreHandler) Create(c *gin.Context) {
 		return
 	}
 
-	storeResp, err := h.storeService.Create(c.Request.Context(), &req)
+	// Associate the store with the current user if member
+	role, _ := c.Get("admin_role")
+	var userID *uint64
+	if role == "member" {
+		uid, _ := c.Get("admin_user_id")
+		id := uid.(uint64)
+		userID = &id
+	}
+
+	storeResp, err := h.storeService.Create(c.Request.Context(), &req, userID)
 	if err != nil {
 		handleError(c, err)
 		return

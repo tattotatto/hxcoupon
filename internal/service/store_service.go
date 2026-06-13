@@ -28,7 +28,7 @@ func NewStoreService(db *gorm.DB, storeRepo *repository.StoreRepo, credRepo *rep
 	return &StoreService{db: db, storeRepo: storeRepo, credentialRepo: credRepo}
 }
 
-func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreRequest) (*response.StoreWithCredentialsResponse, error) {
+func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreRequest, userID *uint64) (*response.StoreWithCredentialsResponse, error) {
 	// Auto-generate unique 5-char alphanumeric store code
 	code, err := s.generateStoreCode(ctx)
 	if err != nil {
@@ -41,6 +41,7 @@ func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreReque
 		AppID:        req.AppID,
 		Type:         req.Type,
 		Status:       1,
+		UserID:       userID,
 		ContactName:  req.ContactName,
 		ContactPhone: req.ContactPhone,
 		Remark:       req.Remark,
