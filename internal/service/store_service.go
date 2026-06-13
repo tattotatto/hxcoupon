@@ -64,12 +64,12 @@ func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreReque
 	}
 
 	if err := s.storeRepo.Create(ctx, store); err != nil {
-		return nil, apperror.NewWithErr(errcode.InternalError, err)
+		return nil, apperror.NewWithMsg(errcode.InternalError, "create store: "+err.Error())
 	}
 
 	appKey, appSecret, err := s.generateCredentials(ctx, store.ID)
 	if err != nil {
-		return nil, err
+		return nil, apperror.NewWithMsg(errcode.InternalError, "generate credentials: "+err.Error())
 	}
 
 	resp := &response.StoreWithCredentialsResponse{
@@ -266,7 +266,7 @@ func (s *StoreService) generateSecret(ctx context.Context, storeID uint64, exist
 	}
 
 	if err := s.credentialRepo.Create(ctx, cred); err != nil {
-		return "", "", apperror.NewWithErr(errcode.InternalError, err)
+		return "", "", apperror.NewWithMsg(errcode.InternalError, "create credential: "+err.Error())
 	}
 
 	return appKey, rawSecret, nil

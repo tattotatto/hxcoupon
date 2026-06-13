@@ -96,6 +96,7 @@ func (h *StoreHandler) Create(c *gin.Context) {
 
 	storeResp, err := h.storeService.Create(c.Request.Context(), &req, userID)
 	if err != nil {
+		c.Error(err) // log the full error for debugging
 		handleError(c, err)
 		return
 	}
