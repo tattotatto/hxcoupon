@@ -359,15 +359,10 @@ func (s *AdminUserService) createCredentials(ctx context.Context, storeID uint64
 	appKey := "ak_" + hex.EncodeToString(appKeyBytes)
 	rawSecret := "sk_" + hex.EncodeToString(appSecretBytes)
 
-	hashedSecret, err := bcrypt.GenerateFromPassword([]byte(rawSecret), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
 	cred := &model.StoreAPICredential{
 		StoreID:   storeID,
 		AppKey:    appKey,
-		AppSecret: string(hashedSecret),
+		AppSecret: rawSecret,
 		Status:    1,
 	}
 

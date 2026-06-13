@@ -15,7 +15,6 @@ import (
 	redisutil "hxcoupon/internal/pkg/redis"
 	"hxcoupon/internal/repository"
 
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -162,16 +161,18 @@ func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) 
 		return nil, apperror.New(errcode.NotFound)
 	}
 
-	// Invalidate cached credential for old appKey before disabling
+	// Check for existing credentials to preserve the AppKey
 	oldCred, _ := s.credentialRepo.GetByStoreID(ctx, store.ID)
+	var appKey string
 	if oldCred != nil {
+		appKey = oldCred.AppKey
+		// Invalidate cached credential for old key
 		redisutil.CacheDelete(ctx, fmt.Sprintf("%s%s", redisutil.KeyCredential, oldCred.AppKey))
+		// Disable old credential
+		_ = s.credentialRepo.DisableByStoreID(ctx, store.ID)
 	}
 
-	// Disable old credentials
-	_ = s.credentialRepo.DisableByStoreID(ctx, store.ID)
-
-	appKey, appSecret, err := s.generateCredentials(ctx, store.ID)
+	appKey, appSecret, err := s.generateSecret(ctx, store.ID, appKey)
 	if err != nil {
 		return nil, err
 	}
@@ -182,28 +183,29 @@ func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) 
 	}, nil
 }
 
-func (s *StoreService) generateCredentials(ctx context.Context, storeID uint64) (string, string, error) {
-	appKeyBytes := make([]byte, 16)
-	appSecretBytes := make([]byte, 32)
-	if _, err := rand.Read(appKeyBytes); err != nil {
-		return "", "", apperror.NewWithErr(errcode.InternalError, err)
+// generateSecret creates a new credential with a fresh app_secret.
+// If existingAppKey is empty, a new AppKey is generated; otherwise the existing AppKey is reused.
+// Returns the appKey and the raw secret.
+func (s *StoreService) generateSecret(ctx context.Context, storeID uint64, existingAppKey string) (string, string, error) {
+	appKey := existingAppKey
+	if appKey == "" {
+		appKeyBytes := make([]byte, 16)
+		if _, err := rand.Read(appKeyBytes); err != nil {
+			return "", "", apperror.NewWithErr(errcode.InternalError, err)
+		}
+		appKey = "ak_" + hex.EncodeToString(appKeyBytes)
 	}
+
+	appSecretBytes := make([]byte, 32)
 	if _, err := rand.Read(appSecretBytes); err != nil {
 		return "", "", apperror.NewWithErr(errcode.InternalError, err)
 	}
-
-	appKey := "ak_" + hex.EncodeToString(appKeyBytes)
 	rawSecret := "sk_" + hex.EncodeToString(appSecretBytes)
-
-	hashedSecret, err := bcrypt.GenerateFromPassword([]byte(rawSecret), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", apperror.NewWithErr(errcode.InternalError, err)
-	}
 
 	cred := &model.StoreAPICredential{
 		StoreID:   storeID,
 		AppKey:    appKey,
-		AppSecret: string(hashedSecret),
+		AppSecret: rawSecret,
 		Status:    1,
 	}
 
@@ -212,6 +214,10 @@ func (s *StoreService) generateCredentials(ctx context.Context, storeID uint64) 
 	}
 
 	return appKey, rawSecret, nil
+}
+
+func (s *StoreService) generateCredentials(ctx context.Context, storeID uint64) (string, string, error) {
+	return s.generateSecret(ctx, storeID, "")
 }
 
 // generateStoreCode generates a unique 5-character alphanumeric code.
