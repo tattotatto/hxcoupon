@@ -3,15 +3,17 @@ package response
 import "hxcoupon/internal/model"
 
 type StoreResponse struct {
-	ID           uint64 `json:"id"`
-	Name         string `json:"name"`
-	Code         string `json:"code"`
-	AppID        string `json:"app_id"`
-	Type         string `json:"type"`
-	Status       int8   `json:"status"`
-	ContactName  string `json:"contact_name"`
-	ContactPhone string `json:"contact_phone"`
-	Remark       string `json:"remark"`
+	ID           uint64  `json:"id"`
+	Name         string  `json:"name"`
+	Code         string  `json:"code"`
+	AppID        string  `json:"app_id"`
+	Type         string  `json:"type"`
+	Status       int8    `json:"status"`
+	ContactName  string  `json:"contact_name"`
+	ContactPhone string  `json:"contact_phone"`
+	Remark       string  `json:"remark"`
+	MpAppID      *string `json:"mp_appid"`
+	MpPagePath   *string `json:"mp_page_path"`
 }
 
 func ToStoreResponse(s *model.Store) *StoreResponse {
@@ -25,6 +27,8 @@ func ToStoreResponse(s *model.Store) *StoreResponse {
 		ContactName:  s.ContactName,
 		ContactPhone: s.ContactPhone,
 		Remark:       s.Remark,
+		MpAppID:      s.MpAppID,
+		MpPagePath:   s.MpPagePath,
 	}
 }
 

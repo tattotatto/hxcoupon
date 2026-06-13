@@ -45,6 +45,12 @@ func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreReque
 		ContactPhone: req.ContactPhone,
 		Remark:       req.Remark,
 	}
+	if req.MpAppID != "" {
+		store.MpAppID = &req.MpAppID
+	}
+	if req.MpPagePath != "" {
+		store.MpPagePath = &req.MpPagePath
+	}
 
 	if err := s.storeRepo.Create(ctx, store); err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)
@@ -119,6 +125,16 @@ func (s *StoreService) Update(ctx context.Context, id uint64, req *request.Updat
 	store.ContactName = req.ContactName
 	store.ContactPhone = req.ContactPhone
 	store.Remark = req.Remark
+	if req.MpAppID != "" {
+		store.MpAppID = &req.MpAppID
+	} else {
+		store.MpAppID = nil
+	}
+	if req.MpPagePath != "" {
+		store.MpPagePath = &req.MpPagePath
+	} else {
+		store.MpPagePath = nil
+	}
 
 	if err := s.storeRepo.Update(ctx, store); err != nil {
 		return nil, apperror.NewWithErr(errcode.InternalError, err)

@@ -158,6 +158,12 @@ export default function StoreList() {
           <Form.Item name="remark" label="备注" rules={[{ max: 512 }]}>
             <Input.TextArea rows={2} />
           </Form.Item>
+          <Form.Item name="mp_appid" label="小程序 AppID" rules={[{ max: 64 }]} tooltip="用于优惠券'去用券'跳转目标小程序">
+            <Input placeholder="wxXXXXXXXX" />
+          </Form.Item>
+          <Form.Item name="mp_page_path" label="小程序页面路径" rules={[{ max: 256 }]} tooltip="用户点击'去用券'时跳转的页面路径">
+            <Input placeholder="pages/coupon/use" />
+          </Form.Item>
         </Form>
       </Modal>
 

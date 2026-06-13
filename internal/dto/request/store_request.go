@@ -7,6 +7,8 @@ type CreateStoreRequest struct {
 	ContactName  string `json:"contact_name" validate:"max=64"`
 	ContactPhone string `json:"contact_phone" validate:"max=20"`
 	Remark       string `json:"remark" validate:"max=512"`
+	MpAppID      string `json:"mp_appid" validate:"max=64"`
+	MpPagePath   string `json:"mp_page_path" validate:"max=256"`
 }
 
 type UpdateStoreRequest struct {
@@ -14,6 +16,8 @@ type UpdateStoreRequest struct {
 	ContactName  string `json:"contact_name" validate:"max=64"`
 	ContactPhone string `json:"contact_phone" validate:"max=20"`
 	Remark       string `json:"remark" validate:"max=512"`
+	MpAppID      string `json:"mp_appid" validate:"max=64"`
+	MpPagePath   string `json:"mp_page_path" validate:"max=256"`
 }
 
 type UpdateStoreStatusRequest struct {

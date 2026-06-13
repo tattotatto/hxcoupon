@@ -409,6 +409,8 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 		Status          string    `json:"status"`
 		ValidStart      time.Time `json:"valid_start"`
 		ValidEnd        time.Time `json:"valid_end"`
+		MpAppID         string    `json:"mp_appid,omitempty"`
+		MpPagePath      string    `json:"mp_page_path,omitempty"`
 	}
 
 	items := make([]userCouponItem, len(instances))
@@ -484,6 +486,7 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 		resp.Type = t.Type
 		resp.DiscountValue = t.DiscountValue
 		resp.ThresholdAmount = t.ThresholdAmount
+		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 	}
 	return resp, nil
 }
@@ -779,6 +782,43 @@ func (s *CouponService) generateIdempotencyKey() string {
 		hex.EncodeToString(b[8:10]),
 		hex.EncodeToString(b[10:16]),
 	)
+}
+
+// resolveMpInfo returns the mini-program AppID and page path for a template's first applicable store.
+func (s *CouponService) resolveMpInfo(ctx context.Context, templateID uint64) (mpAppID, mpPagePath string) {
+	t, err := s.getTemplateCached(ctx, templateID)
+	if err != nil {
+		return "", ""
+	}
+
+	// For "all" scope, check the first available store with mp info
+	// For "specific" scope, check the template's assigned stores
+	var storeIDs []uint64
+	if t.ApplicableScope == "specific" {
+		storeIDs, _ = s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, templateID)
+	}
+	if len(storeIDs) == 0 {
+		// Try all active stores for "all" scope
+		stores, err := s.storeRepo.ListActive(ctx)
+		if err == nil && len(stores) > 0 {
+			storeIDs = []uint64{stores[0].ID}
+		}
+	}
+
+	for _, sid := range storeIDs {
+		store, err := s.getStoreCached(ctx, sid)
+		if err != nil {
+			continue
+		}
+		if store.MpAppID != nil && *store.MpAppID != "" {
+			mpAppID = *store.MpAppID
+			if store.MpPagePath != nil {
+				mpPagePath = *store.MpPagePath
+			}
+			return
+		}
+	}
+	return "", ""
 }
 
 func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstance) (*response.CouponDetailResponse, error) {
