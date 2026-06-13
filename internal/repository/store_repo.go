@@ -102,6 +102,13 @@ func (r *StoreRepo) ListActive(ctx context.Context) ([]model.Store, error) {
 	return stores, err
 }
 
+// ListActiveByUser returns active stores owned by a specific user.
+func (r *StoreRepo) ListActiveByUser(ctx context.Context, userID uint64) ([]model.Store, error) {
+	var stores []model.Store
+	err := r.db.WithContext(ctx).Where("status = 1 AND user_id = ?", userID).Find(&stores).Error
+	return stores, err
+}
+
 func (r *StoreRepo) Count(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&model.Store{}).Count(&count).Error

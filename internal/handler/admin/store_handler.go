@@ -6,6 +6,7 @@ import (
 
 	"hxcoupon/internal/dto/request"
 	"hxcoupon/internal/dto/response"
+	"hxcoupon/internal/model"
 	"hxcoupon/internal/pkg/errcode"
 	"hxcoupon/internal/service"
 
@@ -173,7 +174,16 @@ func (h *StoreHandler) GenerateCredentials(c *gin.Context) {
 
 // Options returns all active stores as a simplified list for dropdown selects.
 func (h *StoreHandler) Options(c *gin.Context) {
-	stores, err := h.storeService.ListActive(c.Request.Context())
+	role, _ := c.Get("admin_role")
+	var stores []model.Store
+	var err error
+
+	if role == "member" {
+		userID, _ := c.Get("admin_user_id")
+		stores, err = h.storeService.ListActiveByUser(c.Request.Context(), userID.(uint64))
+	} else {
+		stores, err = h.storeService.ListActive(c.Request.Context())
+	}
 	if err != nil {
 		handleError(c, err)
 		return

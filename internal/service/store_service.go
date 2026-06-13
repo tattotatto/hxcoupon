@@ -199,6 +199,11 @@ func (s *StoreService) ListActive(ctx context.Context) ([]model.Store, error) {
 	return s.storeRepo.ListActive(ctx)
 }
 
+// ListActiveByUser returns active stores owned by a user for dropdown selects.
+func (s *StoreService) ListActiveByUser(ctx context.Context, userID uint64) ([]model.Store, error) {
+	return s.storeRepo.ListActiveByUser(ctx, userID)
+}
+
 // Delete soft-deletes a store by ID (sets status to -1).
 func (s *StoreService) Delete(ctx context.Context, id uint64) error {
 	if _, err := s.getStoreCached(ctx, id); err != nil {
