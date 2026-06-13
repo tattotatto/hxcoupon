@@ -16,8 +16,10 @@ import {
   FileTextOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { Dropdown, Avatar, Space } from 'antd';
+import { Dropdown, Avatar, Space, Result, Button, Typography } from 'antd';
 import { useAuthStore } from '../stores/authStore';
+
+const { Text } = Typography;
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -100,6 +102,31 @@ export default function AdminLayout() {
   ];
 
   const currentRoute = routeMap[location.pathname];
+  const isPending = user?.approval_status === 0;
+
+  // Show pending approval screen for unapproved members
+  if (isPending && !canManage) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f5f5f5' }}>
+        <Result
+          status="info"
+          title="账号待审批"
+          subTitle={
+            <div>
+              <Text>你的账号 <strong>{user?.username}</strong> 已提交，正在等待管理员审批。</Text>
+              <br />
+              <Text type="secondary">审批通过后即可使用全部功能。你可以先退出等待通知。</Text>
+            </div>
+          }
+          extra={
+            <Button type="primary" onClick={() => { logout(); navigate('/login'); }}>
+              退出登录
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <ProLayout
