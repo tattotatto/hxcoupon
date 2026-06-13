@@ -104,6 +104,7 @@ export default function TemplateBrowse() {
                         </div>
                       </div>
                       <div style={{ color: '#8c8c8c', fontSize: 13 }}>
+                        {item.store_name && <div>门店: {item.store_name}</div>}
                         <div>库存: {item.total_quantity}</div>
                         <div>有效期: {item.validity_type === 'days_after_receive'
                           ? `领取后${item.validity_days}天`
@@ -141,6 +142,7 @@ export default function TemplateBrowse() {
               {/* Template Summary */}
               <Card size="small" style={{ marginBottom: 16, background: '#f0f5ff' }}>
                 <Space wrap>
+                  {selected.store_name && <Tag color="green">{selected.store_name}</Tag>}
                   <Tag color={typeMap[selected.type]?.color}>{typeMap[selected.type]?.label}</Tag>
                   <Text strong>优惠:</Text>
                   <Text style={{ color: '#f5222d', fontSize: 18, fontWeight: 600 }}>

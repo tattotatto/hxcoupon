@@ -366,9 +366,20 @@ func (s *TemplateService) GetSourceStoreID(ctx context.Context, templateID uint6
 	return s.GetApplicableStoreID(ctx, templateID)
 }
 
-// fillMpInfo populates the mini-program fields on a TemplateResponse.
+// fillMpInfo populates the mini-program and store info on a TemplateResponse.
 func (s *TemplateService) fillMpInfo(ctx context.Context, resp *response.TemplateResponse, t *model.CouponTemplate) {
 	resp.MpAppID, resp.MpPagePath = s.ResolveMpInfo(ctx, t)
+	// Populate store name from the first applicable store
+	var storeIDs []uint64
+	if t.ApplicableScope == "specific" {
+		storeIDs, _ = s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
+	}
+	if len(storeIDs) > 0 {
+		store, err := s.storeRepo.GetByID(ctx, storeIDs[0])
+		if err == nil {
+			resp.StoreName = store.Name
+		}
+	}
 }
 
 // ResolveMpInfo returns the mini-program AppID and page path for a template's first applicable store.

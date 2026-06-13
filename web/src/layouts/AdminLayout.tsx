@@ -165,7 +165,11 @@ export default function AdminLayout() {
 
         if (canManage || isIssuer) {
           items.push({ path: '/admin/stores', name: '门店管理', icon: <ShopOutlined /> });
+        }
+        if (canManage) {
           items.push({ path: '/admin/templates', name: '模板管理', icon: <ProjectOutlined /> });
+        }
+        if (canManage || isIssuer) {
           items.push({ path: '/admin/browse', name: '模板浏览', icon: <EyeOutlined /> });
         }
 

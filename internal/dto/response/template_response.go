@@ -27,6 +27,7 @@ type TemplateResponse struct {
 	Status             int8            `json:"status"`
 	MpAppID            string          `json:"mp_appid,omitempty"`
 	MpPagePath         string          `json:"mp_page_path,omitempty"`
+	StoreName          string          `json:"store_name,omitempty"`
 	CreatedAt          time.Time       `json:"created_at"`
 }
 
