@@ -675,6 +675,8 @@ func (s *CouponService) ListAdminRecords(ctx context.Context, page, pageSize int
 		ID              uint64     `json:"id"`
 		CouponCode      string     `json:"coupon_code"`
 		TemplateName    string     `json:"template_name"`
+		Type            string     `json:"type"`
+		DiscountValue   float64    `json:"discount_value"`
 		UserPhone       string     `json:"user_phone"`
 		Status          string     `json:"status"`
 		SourceStoreName string     `json:"source_store_name"`
@@ -694,6 +696,8 @@ func (s *CouponService) ListAdminRecords(ctx context.Context, page, pageSize int
 		}
 		if t, _ := s.getTemplateCached(ctx, ci.TemplateID); t != nil {
 			items[i].TemplateName = t.Name
+			items[i].Type = t.Type
+			items[i].DiscountValue = t.DiscountValue
 		}
 		if s, _ := s.getStoreCached(ctx, ci.SourceStoreID); s != nil {
 			items[i].SourceStoreName = s.Name

@@ -4,10 +4,11 @@ import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { couponApi } from '../../api/coupon';
 
-const statusMap: Record<number, { color: string; text: string }> = {
-  0: { color: 'default', text: '未使用' },
-  1: { color: 'success', text: '已使用' },
-  2: { color: 'error', text: '已过期' },
+const statusMap: Record<string, { color: string; text: string }> = {
+  unused: { color: 'default', text: '未使用' },
+  used: { color: 'success', text: '已使用' },
+  expired: { color: 'error', text: '已过期' },
+  revoke: { color: 'warning', text: '已作废' },
 };
 
 export default function CouponRecords() {
@@ -43,7 +44,7 @@ export default function CouponRecords() {
     },
     {
       title: '状态', dataIndex: 'status', width: 80,
-      render: (s: number) => {
+      render: (s: string) => {
         const item = statusMap[s];
         return item ? <Tag color={item.color}>{item.text}</Tag> : '-';
       },
