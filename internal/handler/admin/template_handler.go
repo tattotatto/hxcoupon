@@ -125,6 +125,20 @@ func (h *TemplateHandler) UpdateStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success(nil))
 }
 
+func (h *TemplateHandler) ResetToDraft(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	if err := h.templateService.ResetToDraft(c.Request.Context(), id); err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, response.Success(nil))
+}
+
 func (h *TemplateHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

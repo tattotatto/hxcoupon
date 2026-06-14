@@ -292,6 +292,24 @@ func (s *TemplateService) UpdateStatus(ctx context.Context, id uint64, status in
 	return nil
 }
 
+func (s *TemplateService) ResetToDraft(ctx context.Context, id uint64) error {
+	t, err := s.templateRepo.GetByID(ctx, id)
+	if err != nil {
+		return apperror.New(errcode.NotFound)
+	}
+	if t.Status == 0 {
+		return apperror.NewWithMsg(errcode.Forbidden, "template is already a draft")
+	}
+	if t.IssuedCount > 0 {
+		return apperror.NewWithMsg(errcode.Forbidden, "only templates with 0 issued count can be reset to draft")
+	}
+	if err := s.templateRepo.UpdateStatus(ctx, id, 0); err != nil {
+		return err
+	}
+	s.invalidateTemplateCache(ctx, id)
+	return nil
+}
+
 func (s *TemplateService) Delete(ctx context.Context, id uint64) error {
 	t, err := s.templateRepo.GetByID(ctx, id)
 	if err != nil {

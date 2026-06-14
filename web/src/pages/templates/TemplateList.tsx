@@ -91,6 +91,14 @@ export default function TemplateList() {
     } catch { /* handled */ }
   };
 
+  const handleResetToDraft = async (id: number) => {
+    try {
+      await templateApi.resetToDraft(id);
+      message.success('已重置为草稿');
+      fetchData();
+    } catch { /* handled */ }
+  };
+
   const columns = [
     { title: 'ID', dataIndex: 'id', width: 60 },
     { title: '名称', dataIndex: 'name', width: 150 },
@@ -115,7 +123,7 @@ export default function TemplateList() {
       render: (v: number, r: any) => `${r.issued_count || 0} / ${v}`,
     },
     {
-      title: '操作', key: 'actions', fixed: 'right' as const, width: 240,
+      title: '操作', key: 'actions', fixed: 'right' as const, width: 320,
       render: (_: any, record: any) => (
         <Space size="small">
           {canManage && record.status === 0 && <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>}
@@ -132,6 +140,11 @@ export default function TemplateList() {
           {canManage && record.status === 2 && (
             <Popconfirm title="确认发布？" onConfirm={() => handleStatus(record.id, 1)}>
               <Button type="link" size="small" style={{ color: '#52c41a' }}>重新发布</Button>
+            </Popconfirm>
+          )}
+          {canManage && record.status !== 0 && record.issued_count === 0 && (
+            <Popconfirm title="确认重置为草稿？重置后可重新编辑日期等信息" onConfirm={() => handleResetToDraft(record.id)}>
+              <Button type="link" size="small" style={{ color: '#fa8c16' }}>重置草稿</Button>
             </Popconfirm>
           )}
           {canManage && record.status === 0 && <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
