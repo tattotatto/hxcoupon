@@ -50,11 +50,11 @@ func (s *TemplateService) Create(ctx context.Context, req *request.CreateTemplat
 	}
 
 	if req.ValidityType == "fixed_date" && req.ValidStart != "" {
-		start, _ := time.Parse("2006-01-02 15:04:05", req.ValidStart)
+		start, _ := time.Parse("2006-01-02", req.ValidStart)
 		t.ValidStart = &start
 	}
 	if req.ValidityType == "fixed_date" && req.ValidEnd != "" {
-		end, _ := time.Parse("2006-01-02 15:04:05", req.ValidEnd)
+		end, _ := time.Parse("2006-01-02", req.ValidEnd)
 		t.ValidEnd = &end
 	}
 
@@ -261,11 +261,11 @@ func (s *TemplateService) Update(ctx context.Context, id uint64, req *request.Up
 	}
 
 	if req.ValidStart != "" {
-		start, _ := time.Parse("2006-01-02 15:04:05", req.ValidStart)
+		start, _ := time.Parse("2006-01-02", req.ValidStart)
 		t.ValidStart = &start
 	}
 	if req.ValidEnd != "" {
-		end, _ := time.Parse("2006-01-02 15:04:05", req.ValidEnd)
+		end, _ := time.Parse("2006-01-02", req.ValidEnd)
 		t.ValidEnd = &end
 	}
 
