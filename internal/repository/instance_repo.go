@@ -179,7 +179,11 @@ func (r *InstanceRepo) ExpireBatch(ctx context.Context, limit int) (int64, error
 
 func (r *InstanceRepo) CountByStatus(ctx context.Context, status string) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.CouponInstance{}).Where("status = ?", status).Count(&count).Error
+	q := r.db.WithContext(ctx).Model(&model.CouponInstance{})
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	err := q.Count(&count).Error
 	return count, err
 }
 
