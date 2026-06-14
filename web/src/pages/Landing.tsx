@@ -352,10 +352,20 @@ export default function Landing() {
             <Text style={{ color: 'rgba(255,255,255,0.6)' }}>宏曦优惠券管理平台</Text>
           </Space>
         </div>
-        <div>
+        <div style={{ marginBottom: 4 }}>
           <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-            © {new Date().getFullYear()} 宏曦优惠券 | 通用开放优惠券解决方案
+            云南宏曦科技有限公司 版权所有
           </Text>
+        </div>
+        <div>
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none' }}
+          >
+            滇ICP备19007078号-6
+          </a>
         </div>
       </Layout.Footer>
     </div>
