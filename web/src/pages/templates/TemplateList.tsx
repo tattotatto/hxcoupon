@@ -118,7 +118,7 @@ export default function TemplateList() {
       title: '操作', key: 'actions', fixed: 'right' as const, width: 240,
       render: (_: any, record: any) => (
         <Space size="small">
-          {canManage && <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>}
+          {canManage && record.status === 0 && <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>}
           {canManage && record.status === 0 && (
             <Popconfirm title="确认发布？" onConfirm={() => handleStatus(record.id, 1)}>
               <Button type="link" size="small" style={{ color: '#52c41a' }}>发布</Button>
@@ -134,7 +134,7 @@ export default function TemplateList() {
               <Button type="link" size="small" style={{ color: '#52c41a' }}>重新发布</Button>
             </Popconfirm>
           )}
-          {canManage && <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
+          {canManage && record.status === 0 && <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>}
         </Space>
