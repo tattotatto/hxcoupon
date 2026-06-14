@@ -202,6 +202,7 @@ func (s *CouponService) GetAvailable(ctx context.Context, userPhone string, stor
 			items[i].Type = t.Type
 			items[i].DiscountValue = t.DiscountValue
 			items[i].ThresholdAmount = t.ThresholdAmount
+			items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 			items[i].Stackable = t.Stackable
 		}
 	}
@@ -429,6 +430,7 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 			items[i].DiscountValue = t.DiscountValue
 			items[i].ThresholdAmount = t.ThresholdAmount
 		}
+		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 	}
 
 	return &response.PaginatedData{
