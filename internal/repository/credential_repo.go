@@ -43,3 +43,13 @@ func (r *CredentialRepo) DisableByStoreID(ctx context.Context, storeID uint64) e
 		Where("store_id = ?", storeID).
 		Update("status", 0).Error
 }
+
+// UpdateSecret updates the app_secret and status of an existing credential row.
+func (r *CredentialRepo) UpdateSecret(ctx context.Context, cred *model.StoreAPICredential) error {
+	return r.db.WithContext(ctx).Model(&model.StoreAPICredential{}).
+		Where("id = ?", cred.ID).
+		Updates(map[string]interface{}{
+			"app_secret": cred.AppSecret,
+			"status":     int8(1),
+		}).Error
+}

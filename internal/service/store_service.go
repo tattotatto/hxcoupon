@@ -222,18 +222,13 @@ func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) 
 		return nil, apperror.New(errcode.NotFound)
 	}
 
-	// Check for existing credentials to preserve the AppKey
+	// Invalidate any cached credential for this store.
 	oldCred, _ := s.credentialRepo.GetByStoreID(ctx, store.ID)
-	var appKey string
 	if oldCred != nil {
-		appKey = oldCred.AppKey
-		// Invalidate cached credential for old key
 		redisutil.CacheDelete(ctx, fmt.Sprintf("%s%s", redisutil.KeyCredential, oldCred.AppKey))
-		// Disable old credential
-		_ = s.credentialRepo.DisableByStoreID(ctx, store.ID)
 	}
 
-	appKey, appSecret, err := s.generateSecret(ctx, store.ID, appKey)
+	appKey, appSecret, err := s.generateSecret(ctx, store.ID, oldCred)
 	if err != nil {
 		return nil, err
 	}
@@ -244,12 +239,15 @@ func (s *StoreService) GenerateCredentials(ctx context.Context, storeID uint64) 
 	}, nil
 }
 
-// generateSecret creates a new credential with a fresh app_secret.
-// If existingAppKey is empty, a new AppKey is generated; otherwise the existing AppKey is reused.
+// generateSecret creates or updates a credential with a fresh app_secret.
+// If oldCred is non-nil, its AppKey is preserved and the existing row is updated.
+// Otherwise a new AppKey is generated and a new row is created.
 // Returns the appKey and the raw secret.
-func (s *StoreService) generateSecret(ctx context.Context, storeID uint64, existingAppKey string) (string, string, error) {
-	appKey := existingAppKey
-	if appKey == "" {
+func (s *StoreService) generateSecret(ctx context.Context, storeID uint64, oldCred *model.StoreAPICredential) (string, string, error) {
+	appKey := ""
+	if oldCred != nil {
+		appKey = oldCred.AppKey
+	} else {
 		appKeyBytes := make([]byte, 16)
 		if _, err := rand.Read(appKeyBytes); err != nil {
 			return "", "", apperror.NewWithErr(errcode.InternalError, err)
@@ -263,22 +261,29 @@ func (s *StoreService) generateSecret(ctx context.Context, storeID uint64, exist
 	}
 	rawSecret := "sk_" + hex.EncodeToString(appSecretBytes)
 
-	cred := &model.StoreAPICredential{
-		StoreID:   storeID,
-		AppKey:    appKey,
-		AppSecret: rawSecret,
-		Status:    1,
-	}
-
-	if err := s.credentialRepo.Create(ctx, cred); err != nil {
-		return "", "", apperror.NewWithMsg(errcode.InternalError, "create credential: "+err.Error())
+	if oldCred != nil {
+		// Update existing credential row instead of creating a duplicate.
+		oldCred.AppSecret = rawSecret
+		if err := s.credentialRepo.UpdateSecret(ctx, oldCred); err != nil {
+			return "", "", apperror.NewWithMsg(errcode.InternalError, "update credential: "+err.Error())
+		}
+	} else {
+		cred := &model.StoreAPICredential{
+			StoreID:   storeID,
+			AppKey:    appKey,
+			AppSecret: rawSecret,
+			Status:    1,
+		}
+		if err := s.credentialRepo.Create(ctx, cred); err != nil {
+			return "", "", apperror.NewWithMsg(errcode.InternalError, "create credential: "+err.Error())
+		}
 	}
 
 	return appKey, rawSecret, nil
 }
 
 func (s *StoreService) generateCredentials(ctx context.Context, storeID uint64) (string, string, error) {
-	return s.generateSecret(ctx, storeID, "")
+	return s.generateSecret(ctx, storeID, nil)
 }
 
 // generateStoreCode generates a unique 5-character alphanumeric code.
