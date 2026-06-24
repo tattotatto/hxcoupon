@@ -206,11 +206,6 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 		)
 	}
 
-	// Serve uploaded files
-	if cfg.Upload.Dir != "" {
-		r.Static("/uploads", cfg.Upload.Dir)
-	}
-
 	// Serve React SPA static files in production
 	if cfg.Server.StaticDir != "" {
 		staticDir := cfg.Server.StaticDir

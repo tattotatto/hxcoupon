@@ -83,12 +83,12 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码，默认1' },
           { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, name: '旗舰店', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ id: 1, name: '旗舰店', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
       },
       {
         method: 'GET', path: '/admin/stores/:id', desc: '门店详情', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '门店ID' }],
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '旗舰店', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' } },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '旗舰店', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' } },
       },
       {
         method: 'GET', path: '/admin/stores/options', desc: '门店下拉选项', auth: 'JWT',
@@ -96,14 +96,14 @@ const endpointGroups: EndpointGroup[] = [
       },
       {
         method: 'POST', path: '/admin/stores', desc: '创建门店（编码自动生成）', auth: 'JWT',
-        body: { name: '新门店', app_id: '', type: 'miniprogram', contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' },
+        body: { name: '新门店', app_id: '', type: 'miniprogram', contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' },
         responseExample: { code: 0, message: 'success', data: { id: 2, name: '新门店', code: 'XK9M3', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '', contact_phone: '', remark: '', credentials: { app_key: 'ak_xxx', app_secret: 'sk_xxx' } } },
       },
       {
         method: 'PUT', path: '/admin/stores/:id', desc: '更新门店', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '门店ID' }],
-        body: { name: '更新名称', contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' },
-        responseExample: { code: 0, message: 'success', data: { id: 1, name: '更新名称', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' } },
+        body: { name: '更新名称', contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' },
+        responseExample: { code: 0, message: 'success', data: { id: 1, name: '更新名称', code: 'ABC12', app_id: 'wxabc123', type: 'miniprogram', status: 1, contact_name: '张三', contact_phone: '13800138000', remark: '', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' } },
       },
       {
         method: 'PATCH', path: '/admin/stores/:id/status', desc: '更新门店状态', auth: 'JWT',
@@ -125,7 +125,7 @@ const endpointGroups: EndpointGroup[] = [
         method: 'POST', path: '/admin/stores/:id/qrcode', desc: '上传门店入口二维码（multipart/form-data，字段名 file）', auth: 'JWT',
         pathParams: [{ name: 'id', type: 'number', required: true, desc: '门店ID' }],
         queryParams: [{ name: 'file', type: 'file', required: true, desc: '二维码图片 (png/jpg/gif)' }],
-        responseExample: { code: 0, message: 'success', data: { qr_code_url: '/uploads/qrcodes/store_1_1234567890.png' } },
+        responseExample: { code: 0, message: 'success', data: { qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_1234567890.png' } },
       },
     ],
   },
@@ -282,7 +282,7 @@ const endpointGroups: EndpointGroup[] = [
       {
         method: 'POST', path: '/coupons/issue', desc: '发放优惠券（幂等键自动生成）', auth: 'HMAC + 频率限制',
         body: { template_id: 1, user_phone: '13800138000' },
-        responseExample: { code: 0, message: 'success', data: { coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', status: 'unused', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' } },
+        responseExample: { code: 0, message: 'success', data: { coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', status: 'unused', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' } },
       },
       {
         method: 'GET', path: '/coupons/available', desc: '查询可用优惠券 (HMAC)', auth: 'HMAC + 频率限制',
@@ -293,7 +293,7 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码，默认1' },
           { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_end: '2025-12-31T23:59:59Z', stackable: false, mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_end: '2025-12-31T23:59:59Z', stackable: false, mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
       },
       {
         method: 'GET', path: '/coupons/user', desc: '用户优惠券列表 (HMAC)', auth: 'HMAC + 频率限制',
@@ -303,12 +303,12 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码，默认1' },
           { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ coupon_id: 1, coupon_code: 'TY000260613LZSPH0', template_name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, status: 'unused', valid_start: '2026-06-13T01:10:20.543+08:00', valid_end: '2027-06-13T01:10:20.543+08:00', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: '/uploads/qrcodes/store_1_xxx.png' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ coupon_id: 1, coupon_code: 'TY000260613LZSPH0', template_name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, status: 'unused', valid_start: '2026-06-13T01:10:20.543+08:00', valid_end: '2027-06-13T01:10:20.543+08:00', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
       },
       {
         method: 'GET', path: '/coupons/:coupon_code', desc: '优惠券详情 (HMAC)', auth: 'HMAC + 频率限制',
         pathParams: [{ name: 'coupon_code', type: 'string', required: true, desc: '券码' }],
-        responseExample: { code: 0, message: 'success', data: { coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, status: 'unused', user_phone: '13800138000', source_store_name: '旗舰店', valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', receive_time: '2025-01-01T12:00:00Z', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: '/uploads/qrcodes/store_1_xxx.png', records: [] } },
+        responseExample: { code: 0, message: 'success', data: { coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, status: 'unused', user_phone: '13800138000', source_store_name: '旗舰店', valid_start: '2025-01-01T00:00:00Z', valid_end: '2025-02-01T00:00:00Z', receive_time: '2025-01-01T12:00:00Z', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png', records: [] } },
       },
       {
         method: 'POST', path: '/coupons/consume', desc: '核销优惠券 (HMAC)', auth: 'HMAC + 频率限制',

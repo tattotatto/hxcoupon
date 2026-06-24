@@ -15,7 +15,7 @@ type Config struct {
 	JWT        JWTConfig        `mapstructure:"jwt"`
 	StoreAuth  StoreAuthConfig  `mapstructure:"store_auth"`
 	Coupon     CouponConfig     `mapstructure:"coupon"`
-	Upload     UploadConfig     `mapstructure:"upload"`
+	OSS        OSSConfig        `mapstructure:"oss"`
 	Log        LogConfig        `mapstructure:"log"`
 }
 
@@ -71,9 +71,12 @@ type CouponConfig struct {
 	CodeRandomLength    int    `mapstructure:"code_random_length"`
 }
 
-type UploadConfig struct {
-	Dir     string `mapstructure:"dir"`
-	MaxSize int    `mapstructure:"max_size"`
+type OSSConfig struct {
+	AccessKeyID     string `mapstructure:"access_key_id"`
+	AccessKeySecret string `mapstructure:"access_key_secret"`
+	Endpoint        string `mapstructure:"endpoint"`
+	Bucket          string `mapstructure:"bucket"`
+	Domain          string `mapstructure:"domain"`
 }
 
 type LogConfig struct {
@@ -102,6 +105,11 @@ func Load(path string) (*Config, error) {
 	v.BindEnv("redis.password")
 	v.BindEnv("jwt.secret")
 	v.BindEnv("server.static_dir")
+	v.BindEnv("oss.access_key_id")
+	v.BindEnv("oss.access_key_secret")
+	v.BindEnv("oss.endpoint")
+	v.BindEnv("oss.bucket")
+	v.BindEnv("oss.domain")
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("read config: %w", err)

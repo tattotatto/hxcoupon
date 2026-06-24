@@ -22,8 +22,6 @@ services:
       - "9000:8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    volumes:
-      - ./uploads:/app/uploads
     environment:
       SERVER_MODE: ${SERVER_MODE:-release}
       DATABASE_HOST: host.docker.internal
@@ -36,6 +34,11 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-random-string}
       SERVER_STATIC_DIR: /static
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET}
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-oss-cn-chengdu.aliyuncs.com}
+      OSS_BUCKET: ${OSS_BUCKET:-ynhx}
+      OSS_DOMAIN: ${OSS_DOMAIN:-https://ynhx.oss-cn-chengdu.aliyuncs.com}
     depends_on:
       redis:
         condition: service_healthy

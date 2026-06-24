@@ -40,6 +40,9 @@ log:
   format: json
   output: stdout
 
-upload:
-  dir: "uploads"
-  max_size: 5
+oss:
+  access_key_id: ""      # set via OSS_ACCESS_KEY_ID env
+  access_key_secret: ""  # set via OSS_ACCESS_KEY_SECRET env
+  endpoint: "oss-cn-chengdu.aliyuncs.com"
+  bucket: "ynhx"
+  domain: "https://ynhx.oss-cn-chengdu.aliyuncs.com"
