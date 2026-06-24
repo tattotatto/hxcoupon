@@ -86,7 +86,7 @@ func main() {
 
 	// Init services
 	authSvc := service.NewAuthService(adminUserRepo, cfg.JWT)
-	storeSvc := service.NewStoreService(db, storeRepo, credRepo)
+	storeSvc := service.NewStoreService(db, storeRepo, credRepo, cfg.Upload.Dir)
 	templateSvc := service.NewTemplateService(db, templateRepo, templateStoreRepo, storeRepo)
 	couponSvc := service.NewCouponService(db, instanceRepo, templateRepo, templateStoreRepo, usageRecordRepo, storeRepo, credRepo)
 	statisticsSvc := service.NewStatisticsService(storeRepo, templateRepo, instanceRepo)

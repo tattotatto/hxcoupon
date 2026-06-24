@@ -15,6 +15,7 @@ type CouponIssueResponse struct {
 	ValidStart      time.Time `json:"valid_start"`
 	ValidEnd        time.Time `json:"valid_end"`
 	Status          string    `json:"status"`
+	QrCodeURL       string    `json:"qr_code_url,omitempty"`
 }
 
 type CouponAvailableResponse struct {
@@ -29,6 +30,7 @@ type CouponAvailableResponse struct {
 	Stackable       bool      `json:"stackable"`
 	MpAppID         string    `json:"mp_appid,omitempty"`
 	MpPagePath      string    `json:"mp_page_path,omitempty"`
+	QrCodeURL       string    `json:"qr_code_url,omitempty"`
 }
 
 type CouponConsumeResponse struct {
@@ -64,6 +66,7 @@ type CouponDetailResponse struct {
 	UseOrderID      string                   `json:"use_order_id"`
 	MpAppID         string                   `json:"mp_appid,omitempty"`
 	MpPagePath      string                   `json:"mp_page_path,omitempty"`
+	QrCodeURL       string                   `json:"qr_code_url,omitempty"`
 	Records         []CouponUsageRecordBrief `json:"records"`
 }
 

@@ -5,7 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math/big"
+	"mime/multipart"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"hxcoupon/internal/dto/request"
 	"hxcoupon/internal/dto/response"
@@ -22,10 +28,11 @@ type StoreService struct {
 	db             *gorm.DB
 	storeRepo      *repository.StoreRepo
 	credentialRepo *repository.CredentialRepo
+	uploadDir      string
 }
 
-func NewStoreService(db *gorm.DB, storeRepo *repository.StoreRepo, credRepo *repository.CredentialRepo) *StoreService {
-	return &StoreService{db: db, storeRepo: storeRepo, credentialRepo: credRepo}
+func NewStoreService(db *gorm.DB, storeRepo *repository.StoreRepo, credRepo *repository.CredentialRepo, uploadDir string) *StoreService {
+	return &StoreService{db: db, storeRepo: storeRepo, credentialRepo: credRepo, uploadDir: uploadDir}
 }
 
 func (s *StoreService) Create(ctx context.Context, req *request.CreateStoreRequest, userID *uint64) (*response.StoreWithCredentialsResponse, error) {
@@ -202,6 +209,66 @@ func (s *StoreService) ListActive(ctx context.Context) ([]model.Store, error) {
 // ListActiveByUser returns active stores owned by a user for dropdown selects.
 func (s *StoreService) ListActiveByUser(ctx context.Context, userID uint64) ([]model.Store, error) {
 	return s.storeRepo.ListActiveByUser(ctx, userID)
+}
+
+// UploadQrCode saves an uploaded QR code image for a store and updates the store record.
+// Returns the accessible URL path.
+func (s *StoreService) UploadQrCode(ctx context.Context, storeID uint64, file *multipart.FileHeader) (string, error) {
+	store, err := s.getStoreCached(ctx, storeID)
+	if err != nil {
+		return "", apperror.New(errcode.NotFound)
+	}
+
+	// Validate file type
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif" {
+		return "", apperror.NewWithMsg(errcode.InvalidParams, "only png/jpg/jpeg/gif images are allowed")
+	}
+
+	// Ensure upload directory exists
+	qrcodeDir := filepath.Join(s.uploadDir, "qrcodes")
+	if err := os.MkdirAll(qrcodeDir, 0755); err != nil {
+		return "", apperror.NewWithMsg(errcode.InternalError, "failed to create upload directory")
+	}
+
+	// Generate unique filename
+	filename := fmt.Sprintf("store_%d_%d%s", storeID, time.Now().UnixNano(), ext)
+	savePath := filepath.Join(qrcodeDir, filename)
+
+	// Open uploaded file
+	src, err := file.Open()
+	if err != nil {
+		return "", apperror.NewWithMsg(errcode.InternalError, "failed to open uploaded file")
+	}
+	defer src.Close()
+
+	// Create destination file
+	dst, err := os.Create(savePath)
+	if err != nil {
+		return "", apperror.NewWithMsg(errcode.InternalError, "failed to create file")
+	}
+	defer dst.Close()
+
+	// Copy file contents
+	if _, err := io.Copy(dst, src); err != nil {
+		os.Remove(savePath)
+		return "", apperror.NewWithMsg(errcode.InternalError, "failed to save file")
+	}
+
+	// Build accessible URL path
+	urlPath := "/uploads/qrcodes/" + filename
+
+	// Update store record
+	store.QrCodeURL = &urlPath
+	if err := s.storeRepo.Update(ctx, store); err != nil {
+		os.Remove(savePath)
+		return "", apperror.NewWithMsg(errcode.InternalError, "failed to update store: "+err.Error())
+	}
+
+	// Invalidate cache
+	redisutil.CacheDelete(ctx, fmt.Sprintf("%s%d", redisutil.KeyStore, storeID))
+
+	return urlPath, nil
 }
 
 // Delete soft-deletes a store by ID (sets status to -1).

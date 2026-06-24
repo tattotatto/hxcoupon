@@ -147,6 +147,7 @@ func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templat
 			ValidStart:      ci.ValidStart,
 			ValidEnd:        ci.ValidEnd,
 			Status:          ci.Status,
+		QrCodeURL:       s.resolveQrCodeURL(ctx, sourceStoreID),
 		}
 		return nil
 	})
@@ -205,6 +206,7 @@ func (s *CouponService) GetAvailable(ctx context.Context, userPhone string, stor
 			items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 			items[i].Stackable = t.Stackable
 		}
+		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	}
 
 	return &response.PaginatedData{
@@ -412,6 +414,7 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 		ValidEnd        time.Time `json:"valid_end"`
 		MpAppID         string    `json:"mp_appid,omitempty"`
 		MpPagePath      string    `json:"mp_page_path,omitempty"`
+		QrCodeURL       string    `json:"qr_code_url,omitempty"`
 	}
 
 	items := make([]userCouponItem, len(instances))
@@ -431,6 +434,7 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 			items[i].ThresholdAmount = t.ThresholdAmount
 		}
 		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
+		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	}
 
 	return &response.PaginatedData{
@@ -490,6 +494,7 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 		resp.ThresholdAmount = t.ThresholdAmount
 		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 	}
+	resp.QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	return resp, nil
 }
 
@@ -649,6 +654,7 @@ func (s *CouponService) buildIssueResponse(ctx context.Context, ci *model.Coupon
 		ValidStart:      ci.ValidStart,
 		ValidEnd:        ci.ValidEnd,
 		Status:          ci.Status,
+		QrCodeURL:       s.resolveQrCodeURL(ctx, ci.SourceStoreID),
 	}, nil
 }
 
@@ -786,6 +792,15 @@ func (s *CouponService) generateIdempotencyKey() string {
 	)
 }
 
+// resolveQrCodeURL returns the QR code URL for a store, or empty string if not configured.
+func (s *CouponService) resolveQrCodeURL(ctx context.Context, storeID uint64) string {
+	store, err := s.getStoreCached(ctx, storeID)
+	if err != nil || store.QrCodeURL == nil {
+		return ""
+	}
+	return *store.QrCodeURL
+}
+
 // resolveMpInfo returns mini-program redirect info for a template's first applicable store.
 func (s *CouponService) resolveMpInfo(ctx context.Context, templateID uint64) (mpAppID, mpPagePath string) {
 	t, err := s.getTemplateCached(ctx, templateID)
@@ -861,5 +876,6 @@ func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstanc
 		resp.ThresholdAmount = t.ThresholdAmount
 		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 	}
+	resp.QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	return resp, nil
 }

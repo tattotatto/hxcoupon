@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Card, Tag, Space, Button, Modal, Form, Input, Select, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, KeyOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Card, Tag, Space, Button, Modal, Form, Input, Select, Upload, Image, message, Popconfirm } from 'antd';
+import { PlusOutlined, EditOutlined, KeyOutlined, DeleteOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { storeApi } from '../../api/store';
 import CredentialsModal from '../../components/CredentialsModal';
 
@@ -11,6 +11,7 @@ export default function AppList() {
   const [modal, setModal] = useState<{ open: boolean; editing?: any }>({ open: false });
   const [credentials, setCredentials] = useState<{ app_key: string; app_secret: string } | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [uploading, setUploading] = useState<number | null>(null);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -84,11 +85,34 @@ export default function AppList() {
     { title: '联系人', dataIndex: 'contact_name', width: 100 },
     { title: '电话', dataIndex: 'contact_phone', width: 120 },
     {
-      title: '操作', key: 'actions', fixed: 'right' as const, width: 200,
+      title: 'QR码', dataIndex: 'qr_code_url', width: 80,
+      render: (url: string | null) =>
+        url ? (
+          <Image src={url} width={32} height={32} style={{ objectFit: 'cover', borderRadius: 4 }} />
+        ) : (
+          <Tag color="default">未上传</Tag>
+        ),
+    },
+    {
+      title: '操作', key: 'actions', fixed: 'right' as const, width: 260,
       render: (_: any, record: any) => (
         <Space>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
           <Button type="link" size="small" icon={<KeyOutlined />} onClick={() => handleCredentials(record.id)}>密钥</Button>
+          <Upload
+            showUploadList={false}
+            accept="image/png,image/jpeg,image/gif"
+            beforeUpload={(file) => {
+              setUploading(record.id);
+              storeApi.uploadAppQrCode(record.id, file)
+                .then(() => { message.success('QR码上传成功'); fetchData(); })
+                .catch(() => message.error('上传失败'))
+                .finally(() => setUploading(null));
+              return false;
+            }}
+          >
+            <Button type="link" size="small" icon={<UploadOutlined />} loading={uploading === record.id}>QR</Button>
+          </Upload>
           <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
@@ -160,6 +184,31 @@ export default function AppList() {
           <Form.Item name="mp_page_path" label="小程序页面路径" rules={[{ max: 256 }]} tooltip="用户点击'去用券'时跳转的页面路径">
             <Input placeholder="pages/coupon/use" />
           </Form.Item>
+          {modal.editing && (
+            <Form.Item label="入口二维码">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {modal.editing.qr_code_url && (
+                  <Image src={modal.editing.qr_code_url} width={120} height={120} style={{ objectFit: 'cover', borderRadius: 8 }} />
+                )}
+                <Upload
+                  showUploadList={false}
+                  accept="image/png,image/jpeg,image/gif"
+                  beforeUpload={(file) => {
+                    setUploading(modal.editing.id);
+                    storeApi.uploadAppQrCode(modal.editing.id, file)
+                      .then(() => { message.success('QR码上传成功'); fetchData(); })
+                      .catch(() => message.error('上传失败'))
+                      .finally(() => setUploading(null));
+                    return false;
+                  }}
+                >
+                  <Button icon={<UploadOutlined />} loading={uploading === modal.editing.id}>
+                    {modal.editing.qr_code_url ? '更换二维码' : '上传二维码'}
+                  </Button>
+                </Upload>
+              </Space>
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 

@@ -15,6 +15,7 @@ type Config struct {
 	JWT        JWTConfig        `mapstructure:"jwt"`
 	StoreAuth  StoreAuthConfig  `mapstructure:"store_auth"`
 	Coupon     CouponConfig     `mapstructure:"coupon"`
+	Upload     UploadConfig     `mapstructure:"upload"`
 	Log        LogConfig        `mapstructure:"log"`
 }
 
@@ -68,6 +69,11 @@ type StoreAuthConfig struct {
 type CouponConfig struct {
 	CodePrefixUniversal string `mapstructure:"code_prefix_universal"`
 	CodeRandomLength    int    `mapstructure:"code_random_length"`
+}
+
+type UploadConfig struct {
+	Dir     string `mapstructure:"dir"`
+	MaxSize int    `mapstructure:"max_size"`
 }
 
 type LogConfig struct {

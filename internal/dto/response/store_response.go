@@ -14,6 +14,7 @@ type StoreResponse struct {
 	Remark       string  `json:"remark"`
 	MpAppID      *string `json:"mp_appid"`
 	MpPagePath   *string `json:"mp_page_path"`
+	QrCodeURL    *string `json:"qr_code_url"`
 }
 
 func ToStoreResponse(s *model.Store) *StoreResponse {
@@ -29,6 +30,7 @@ func ToStoreResponse(s *model.Store) *StoreResponse {
 		Remark:       s.Remark,
 		MpAppID:      s.MpAppID,
 		MpPagePath:   s.MpPagePath,
+		QrCodeURL:    s.QrCodeURL,
 	}
 }
 

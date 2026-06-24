@@ -95,6 +95,7 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 		adminGroup.PUT("/stores/:id", h.AdminStore.Update)
 		adminGroup.PATCH("/stores/:id/status", h.AdminStore.UpdateStatus)
 		adminGroup.POST("/stores/:id/credentials", h.AdminStore.GenerateCredentials)
+		adminGroup.POST("/stores/:id/qrcode", h.AdminStore.UploadQrCode)
 
 		// Template management
 		adminGroup.GET("/templates", h.AdminTemplate.List)
@@ -128,6 +129,7 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 			appsGroup.PUT("/:id", h.AdminStore.Update)
 			appsGroup.DELETE("/:id", h.AdminStore.DeleteStore)
 			appsGroup.POST("/:id/credentials", h.AdminStore.GenerateCredentials)
+			appsGroup.POST("/:id/qrcode", h.AdminStore.UploadQrCode)
 		}
 
 		// Reports
@@ -202,6 +204,11 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 			middleware.RateLimit("rl:action", 200, 1*time.Minute),
 			h.OpenCoupon.Refund,
 		)
+	}
+
+	// Serve uploaded files
+	if cfg.Upload.Dir != "" {
+		r.Static("/uploads", cfg.Upload.Dir)
 	}
 
 	// Serve React SPA static files in production

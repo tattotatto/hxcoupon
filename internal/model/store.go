@@ -16,6 +16,7 @@ type Store struct {
 	Remark       string    `gorm:"type:varchar(512)" json:"remark"`
 	MpAppID      *string   `gorm:"column:mp_appid;type:varchar(64);default:null" json:"mp_appid"`
 	MpPagePath   *string   `gorm:"column:mp_page_path;type:varchar(256);default:null" json:"mp_page_path"`
+	QrCodeURL    *string   `gorm:"column:qr_code_url;type:varchar(512);default:null" json:"qr_code_url"`
 	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }

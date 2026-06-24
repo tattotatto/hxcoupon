@@ -39,3 +39,7 @@ log:
   level: info
   format: json
   output: stdout
+
+upload:
+  dir: "uploads"
+  max_size: 5

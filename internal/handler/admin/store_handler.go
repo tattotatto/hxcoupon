@@ -201,6 +201,35 @@ func (h *StoreHandler) Options(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success(items))
 }
 
+// UploadQrCode handles QR code image upload for a store.
+func (h *StoreHandler) UploadQrCode(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	if !h.guardOwnership(c, id) {
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "file is required"))
+		return
+	}
+
+	urlPath, err := h.storeService.UploadQrCode(c.Request.Context(), id, file)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Success(map[string]string{
+		"qr_code_url": urlPath,
+	}))
+}
+
 // DeleteStore soft-deletes a store.
 func (h *StoreHandler) DeleteStore(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
