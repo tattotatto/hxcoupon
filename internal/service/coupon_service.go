@@ -414,7 +414,7 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 		ValidEnd        time.Time `json:"valid_end"`
 		MpAppID         string    `json:"mp_appid,omitempty"`
 		MpPagePath      string    `json:"mp_page_path,omitempty"`
-		QrCodeURL       string    `json:"qr_code_url,omitempty"`
+		QrCodeURL       string    `json:"qr_code_url"`
 	}
 
 	items := make([]userCouponItem, len(instances))
