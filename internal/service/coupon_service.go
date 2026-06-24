@@ -792,11 +792,14 @@ func (s *CouponService) generateIdempotencyKey() string {
 	)
 }
 
-// resolveQrCodeURL returns the QR code URL for a store, or empty string if not configured.
+// Default QR code URL used as fallback when a store has no QR code configured.
+const defaultQrCodeURL = "https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_1782303867445088958.jpg"
+
+// resolveQrCodeURL returns the QR code URL for a store, or the default if not configured.
 func (s *CouponService) resolveQrCodeURL(ctx context.Context, storeID uint64) string {
 	store, err := s.getStoreCached(ctx, storeID)
 	if err != nil || store.QrCodeURL == nil {
-		return ""
+		return defaultQrCodeURL
 	}
 	return *store.QrCodeURL
 }
