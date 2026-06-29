@@ -7,6 +7,7 @@ export const templateApi = {
   update: (id: number, data: Record<string, unknown>) => client.put(`/admin/templates/${id}`, data),
   updateStatus: (id: number, status: number) => client.patch(`/admin/templates/${id}/status`, { status }),
   resetToDraft: (id: number) => client.patch(`/admin/templates/${id}/reset-to-draft`),
+  increaseQuantity: (id: number, quantity: number) => client.patch(`/admin/templates/${id}/increase-quantity`, { quantity }),
   delete: (id: number) => client.delete(`/admin/templates/${id}`),
   browse: (params: Record<string, unknown>) => client.get('/admin/browse/templates', { params }),
   browseDetail: (id: number) => client.get(`/admin/browse/templates/${id}`),

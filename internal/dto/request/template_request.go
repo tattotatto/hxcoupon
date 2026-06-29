@@ -36,6 +36,10 @@ type UpdateTemplateStatusRequest struct {
 	Status int8 `json:"status" validate:"oneof=0 1 2"`
 }
 
+type IncreaseQuantityRequest struct {
+	Quantity uint `json:"quantity" validate:"required,gt=0"`
+}
+
 type TemplateListRequest struct {
 	Pagination
 	StoreID *uint64 `json:"store_id" form:"store_id"`

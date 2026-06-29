@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Table, Card, Tag, Space, Button, Modal, Form, Input, InputNumber, Select, Switch, DatePicker, message, Popconfirm, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, RiseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { templateApi } from '../../api/template';
 import { storeApi } from '../../api/store';
@@ -99,6 +99,27 @@ export default function TemplateList() {
     } catch { /* handled */ }
   };
 
+  const [increaseModal, setIncreaseModal] = useState<{ open: boolean; record?: any }>({ open: false });
+  const [increaseLoading, setIncreaseLoading] = useState(false);
+  const [increaseForm] = Form.useForm();
+
+  const openIncrease = (record: any) => {
+    increaseForm.resetFields();
+    setIncreaseModal({ open: true, record });
+  };
+
+  const handleIncrease = async () => {
+    const values = await increaseForm.validateFields();
+    setIncreaseLoading(true);
+    try {
+      await templateApi.increaseQuantity(increaseModal.record.id, values.quantity);
+      message.success(`已增发 ${values.quantity} 张`);
+      setIncreaseModal({ open: false });
+      fetchData();
+    } catch { /* handled */ }
+    finally { setIncreaseLoading(false); }
+  };
+
   const columns = [
     { title: 'ID', dataIndex: 'id', width: 60 },
     { title: '名称', dataIndex: 'name', width: 150 },
@@ -141,6 +162,9 @@ export default function TemplateList() {
             <Popconfirm title="确认发布？" onConfirm={() => handleStatus(record.id, 1)}>
               <Button type="link" size="small" style={{ color: '#52c41a' }}>重新发布</Button>
             </Popconfirm>
+          )}
+          {canManage && record.status !== 0 && (
+            <Button type="link" size="small" icon={<RiseOutlined />} style={{ color: '#1890ff' }} onClick={() => openIncrease(record)}>增发</Button>
           )}
           {canManage && record.status !== 0 && record.issued_count === 0 && (
             <Popconfirm title="确认重置为草稿？重置后可重新编辑日期等信息" onConfirm={() => handleResetToDraft(record.id)}>
@@ -287,6 +311,28 @@ export default function TemplateList() {
               </Form.Item>
             </Col>
           </Row>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={increaseModal.open}
+        title="增发优惠券"
+        onOk={handleIncrease}
+        onCancel={() => setIncreaseModal({ open: false })}
+        confirmLoading={increaseLoading}
+        okText="确认增发"
+        cancelText="取消"
+      >
+        <Form form={increaseForm} layout="vertical" style={{ marginTop: 16 }}>
+          {increaseModal.record && (
+            <p style={{ marginBottom: 16 }}>
+              模板：<strong>{increaseModal.record.name}</strong>，
+              当前库存：已发 <strong>{increaseModal.record.issued_count || 0}</strong> / 总量 <strong>{increaseModal.record.total_quantity}</strong>
+            </p>
+          )}
+          <Form.Item name="quantity" label="增发数量" rules={[{ required: true, message: '请输入增发数量' }, { type: 'number', min: 1, message: '至少为1' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入增发数量" />
+          </Form.Item>
         </Form>
       </Modal>
     </>

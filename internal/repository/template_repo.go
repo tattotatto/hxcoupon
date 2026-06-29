@@ -134,3 +134,10 @@ func (r *TemplateRepo) Count(ctx context.Context) (int64, error) {
 	err := r.db.WithContext(ctx).Model(&model.CouponTemplate{}).Count(&count).Error
 	return count, err
 }
+
+// IncreaseTotalQuantity atomically adds amount to total_quantity.
+func (r *TemplateRepo) IncreaseTotalQuantity(ctx context.Context, id uint64, amount uint) error {
+	return r.db.WithContext(ctx).Model(&model.CouponTemplate{}).
+		Where("id = ?", id).
+		Update("total_quantity", gorm.Expr("total_quantity + ?", amount)).Error
+}

@@ -108,6 +108,7 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 			templateWrite.PUT("/templates/:id", h.AdminTemplate.Update)
 			templateWrite.PATCH("/templates/:id/status", h.AdminTemplate.UpdateStatus)
 			templateWrite.PATCH("/templates/:id/reset-to-draft", h.AdminTemplate.ResetToDraft)
+			templateWrite.PATCH("/templates/:id/increase-quantity", h.AdminTemplate.IncreaseQuantity)
 			templateWrite.DELETE("/templates/:id", h.AdminTemplate.Delete)
 		}
 

@@ -153,6 +153,26 @@ func (h *TemplateHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success(nil))
 }
 
+func (h *TemplateHandler) IncreaseQuantity(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, "invalid id"))
+		return
+	}
+
+	var req request.IncreaseQuantityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(errcode.InvalidParams, err.Error()))
+		return
+	}
+
+	if err := h.templateService.IncreaseQuantity(c.Request.Context(), id, req.Quantity); err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, response.Success(nil))
+}
+
 // Browse lists all published templates for consumers.
 func (h *TemplateHandler) Browse(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

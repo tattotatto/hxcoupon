@@ -310,6 +310,22 @@ func (s *TemplateService) ResetToDraft(ctx context.Context, id uint64) error {
 	return nil
 }
 
+// IncreaseQuantity adds more inventory to a published or disabled template.
+func (s *TemplateService) IncreaseQuantity(ctx context.Context, id uint64, amount uint) error {
+	t, err := s.templateRepo.GetByID(ctx, id)
+	if err != nil {
+		return apperror.New(errcode.NotFound)
+	}
+	if t.Status == 0 {
+		return apperror.NewWithMsg(errcode.Forbidden, "草稿状态的模板请直接编辑发行总量")
+	}
+	if err := s.templateRepo.IncreaseTotalQuantity(ctx, id, amount); err != nil {
+		return apperror.NewWithErr(errcode.InternalError, err)
+	}
+	s.invalidateTemplateCache(ctx, id)
+	return nil
+}
+
 func (s *TemplateService) Delete(ctx context.Context, id uint64) error {
 	t, err := s.templateRepo.GetByID(ctx, id)
 	if err != nil {
