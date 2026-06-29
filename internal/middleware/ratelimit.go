@@ -32,7 +32,7 @@ func RateLimit(keyPrefix string, limit int, window time.Duration) gin.HandlerFun
 			return
 		}
 		if !allowed {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, response.Error(60008, "rate limit exceeded"))
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, response.Error(60008, "请求频率超限"))
 			return
 		}
 		c.Next()

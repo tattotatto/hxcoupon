@@ -23,7 +23,7 @@ func RequirePermission(perm string) gin.HandlerFunc {
 		mt, _ := memberType.(*string)
 
 		if !hasMemberPermission(mt, perm) {
-			c.AbortWithStatusJSON(http.StatusForbidden, response.Error(40300, "insufficient permissions"))
+			c.AbortWithStatusJSON(http.StatusForbidden, response.Error(40300, "权限不足"))
 			return
 		}
 		c.Next()

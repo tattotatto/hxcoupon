@@ -70,7 +70,7 @@ func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templat
 
 		// Validate template status
 		if t.Status != 1 {
-			return apperror.NewWithMsg(errcode.CouponNotApply, "template is not enabled")
+			return apperror.NewWithMsg(errcode.CouponNotApply, "优惠券模板未启用")
 		}
 
 		// Check inventory
@@ -230,7 +230,7 @@ func (s *CouponService) Consume(ctx context.Context, couponCode, userPhone strin
 
 		// Validate ownership
 		if ci.UserPhone != userPhone {
-			return apperror.NewWithMsg(errcode.Forbidden, "coupon does not belong to this user")
+			return apperror.NewWithMsg(errcode.Forbidden, "优惠券不属于该用户")
 		}
 
 		// Validate status
@@ -241,7 +241,7 @@ func (s *CouponService) Consume(ctx context.Context, couponCode, userPhone strin
 			if ci.Status == "expired" {
 				return apperror.New(errcode.CouponExpired)
 			}
-			return apperror.NewWithMsg(errcode.CouponNotApply, "coupon status: "+ci.Status)
+			return apperror.NewWithMsg(errcode.CouponNotApply, "优惠券状态异常: "+ci.Status)
 		}
 
 		// Validate validity period
@@ -324,12 +324,12 @@ func (s *CouponService) Refund(ctx context.Context, couponCode, userPhone string
 
 		// Validate ownership
 		if ci.UserPhone != userPhone {
-			return apperror.NewWithMsg(errcode.Forbidden, "coupon does not belong to this user")
+			return apperror.NewWithMsg(errcode.Forbidden, "优惠券不属于该用户")
 		}
 
 		// Validate status
 		if ci.Status != "used" {
-			return apperror.NewWithMsg(errcode.CouponNotApply, "coupon is not in used state")
+			return apperror.NewWithMsg(errcode.CouponNotApply, "优惠券不在已使用状态")
 		}
 
 		// Validate order match

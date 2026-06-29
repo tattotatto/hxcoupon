@@ -20,22 +20,22 @@ const (
 )
 
 var messages = map[int]string{
-	Success:          "success",
-	InvalidParams:    "invalid parameters",
-	AuthFailed:       "authentication failed",
-	StoreNotAuth:     "store not authorized",
-	Forbidden:        "forbidden",
-	NotFound:         "resource not found",
-	Conflict:         "conflict",
-	InternalError:    "internal server error",
-	CouponExpired:    "coupon has expired",
-	CouponUsed:       "coupon already used",
-	CouponNotApply:   "coupon not applicable to this store",
-	NoInventory:      "insufficient inventory",
-	PerUserLimit:     "per-user limit reached",
-	BelowThreshold:   "order amount below threshold",
-	RefundMismatch:   "refund order mismatch",
-	RateLimited:      "rate limit exceeded",
+	Success:          "成功",
+	InvalidParams:    "参数无效",
+	AuthFailed:       "认证失败",
+	StoreNotAuth:     "门店未授权",
+	Forbidden:        "无权限",
+	NotFound:         "资源不存在",
+	Conflict:         "数据冲突",
+	InternalError:    "服务器内部错误",
+	CouponExpired:    "优惠券已过期",
+	CouponUsed:       "优惠券已使用",
+	CouponNotApply:   "优惠券不适用于该门店",
+	NoInventory:      "库存不足",
+	PerUserLimit:     "已达单人领取上限",
+	BelowThreshold:   "订单金额未达门槛",
+	RefundMismatch:   "退款订单不匹配",
+	RateLimited:      "请求频率超限",
 }
 
 func Message(code int) string {
