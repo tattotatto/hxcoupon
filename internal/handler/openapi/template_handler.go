@@ -50,5 +50,13 @@ func (h *TemplateHandler) Create(c *gin.Context) {
 		handleError(c, err)
 		return
 	}
+
+	// Open API templates are published immediately so stores can start issuing.
+	if err := h.templateService.UpdateStatus(c.Request.Context(), t.ID, 1); err != nil {
+		handleError(c, err)
+		return
+	}
+	t.Status = 1
+
 	c.JSON(http.StatusCreated, response.Success(t))
 }
