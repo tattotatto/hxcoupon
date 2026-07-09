@@ -17,7 +17,7 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":    errcode.AuthFailed,
-				"message": "missing authorization header",
+				"message": "缺少认证请求头",
 			})
 			return
 		}
@@ -26,7 +26,7 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":    errcode.AuthFailed,
-				"message": "invalid authorization format",
+				"message": "认证格式无效",
 			})
 			return
 		}

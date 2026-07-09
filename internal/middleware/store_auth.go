@@ -28,19 +28,19 @@ func StoreAuth(cfg config.StoreAuthConfig, credentialGetter func(appKey string) 
 		signature := c.GetHeader("X-Signature")
 
 		if appKey == "" || timestampStr == "" || nonce == "" || signature == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "missing auth headers"))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "缺少认证请求头"))
 			return
 		}
 
 		// Verify timestamp within tolerance
 		ts, err := strconv.ParseInt(timestampStr, 10, 64)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "invalid timestamp"))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "无效的时间戳"))
 			return
 		}
 		now := time.Now().Unix()
 		if abs(now-ts) > int64(tolerance.Seconds()) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "timestamp out of range"))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "时间戳超出有效范围"))
 			return
 		}
 
@@ -49,7 +49,7 @@ func StoreAuth(cfg config.StoreAuthConfig, credentialGetter func(appKey string) 
 		ctx := c.Request.Context()
 		ok, err := redisutil.Client.SetNX(ctx, nonceKey, "1", 5*time.Minute).Result()
 		if err == nil && !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "duplicate nonce"))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "重复的请求随机数"))
 			return
 		}
 		// If Redis is down (err != nil), continue without nonce check (graceful degradation)
@@ -65,7 +65,7 @@ func StoreAuth(cfg config.StoreAuthConfig, credentialGetter func(appKey string) 
 		// Get credentials
 		storeID, appSecret, err := credentialGetter(appKey)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40101, "invalid app key"))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40101, "无效的应用密钥"))
 			return
 		}
 
@@ -74,7 +74,7 @@ func StoreAuth(cfg config.StoreAuthConfig, credentialGetter func(appKey string) 
 		expectedSig := computeHMAC(appSecret, signingStr)
 
 		if subtle.ConstantTimeCompare([]byte(signature), []byte(expectedSig)) != 1 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "invalid signature"))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Error(40100, "签名验证失败"))
 			return
 		}
 

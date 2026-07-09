@@ -36,6 +36,7 @@ type Handlers struct {
 	AdminReport     *admin.ReportHandler
 	AdminCoupon     *admin.CouponHandler
 	OpenCoupon      *openapi.CouponHandler
+	OpenTemplate    *openapi.TemplateHandler
 }
 
 func NewHandlers(svc *Services) *Handlers {
@@ -48,6 +49,7 @@ func NewHandlers(svc *Services) *Handlers {
 		AdminReport:     admin.NewReportHandler(svc.Report),
 		AdminCoupon:     admin.NewCouponHandler(svc.Coupon),
 		OpenCoupon:      openapi.NewCouponHandler(svc.Coupon, svc.Template),
+		OpenTemplate:    openapi.NewTemplateHandler(svc.Template, svc.Store),
 	}
 }
 
@@ -174,6 +176,11 @@ func Setup(r *gin.Engine, h *Handlers, svc *Services, cfg *config.Config, logger
 		openGroup.GET("/templates",
 			middleware.RateLimit("rl:query", 300, 1*time.Minute),
 			h.OpenCoupon.ListTemplates,
+		)
+
+		openGroup.POST("/templates",
+			middleware.RateLimit("rl:action", 30, 1*time.Minute),
+			h.OpenTemplate.Create,
 		)
 
 		openGroup.POST("/issue",
