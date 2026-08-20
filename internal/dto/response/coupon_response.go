@@ -28,6 +28,7 @@ type CouponAvailableResponse struct {
 	ThresholdAmount float64   `json:"threshold_amount"`
 	ValidEnd        time.Time `json:"valid_end"`
 	Stackable       bool      `json:"stackable"`
+	SourceStoreName string    `json:"source_store_name"`
 	MpAppID         string    `json:"mp_appid,omitempty"`
 	MpPagePath      string    `json:"mp_page_path,omitempty"`
 	QrCodeURL       string    `json:"qr_code_url"`

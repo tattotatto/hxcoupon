@@ -298,7 +298,7 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码，默认1' },
           { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_end: '2025-12-31T23:59:59Z', stackable: false, mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, items: [{ coupon_id: 1, coupon_code: 'XYZ12ABC34DE', template_name: '满减券', type: 'full_reduction', discount_value: 10, threshold_amount: 100, valid_end: '2025-12-31T23:59:59Z', stackable: false, source_store_name: '旗舰店', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
       },
       {
         method: 'GET', path: '/coupons/user', desc: '用户优惠券列表 (HMAC)', auth: 'HMAC + 频率限制',
@@ -308,7 +308,7 @@ const endpointGroups: EndpointGroup[] = [
           { name: 'page', type: 'number', desc: '页码，默认1' },
           { name: 'page_size', type: 'number', desc: '每页条数，默认20' },
         ],
-        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ coupon_id: 1, coupon_code: 'TY000260613LZSPH0', template_name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, status: 'unused', valid_start: '2026-06-13T01:10:20.543+08:00', valid_end: '2027-06-13T01:10:20.543+08:00', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
+        responseExample: { code: 0, message: 'success', data: { total: 1, page: 1, page_size: 20, items: [{ coupon_id: 1, coupon_code: 'TY000260613LZSPH0', template_name: '满50减20优惠券', type: 'full_reduction', discount_value: 20, threshold_amount: 50, status: 'unused', valid_start: '2026-06-13T01:10:20.543+08:00', valid_end: '2027-06-13T01:10:20.543+08:00', source_store_name: '旗舰店', mp_appid: 'wxabc123', mp_page_path: 'pages/coupon/use', qr_code_url: 'https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_xxx.png' }] } },
       },
       {
         method: 'GET', path: '/coupons/:coupon_code', desc: '优惠券详情 (HMAC)', auth: 'HMAC + 频率限制',

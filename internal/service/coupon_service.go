@@ -203,9 +203,10 @@ func (s *CouponService) GetAvailable(ctx context.Context, userPhone string, stor
 			items[i].Type = t.Type
 			items[i].DiscountValue = t.DiscountValue
 			items[i].ThresholdAmount = t.ThresholdAmount
-			items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
 			items[i].Stackable = t.Stackable
 		}
+		items[i].SourceStoreName = s.resolveStoreName(ctx, ci.SourceStoreID)
+		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
 		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	}
 
@@ -412,6 +413,7 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 		Status          string    `json:"status"`
 		ValidStart      time.Time `json:"valid_start"`
 		ValidEnd        time.Time `json:"valid_end"`
+		SourceStoreName string    `json:"source_store_name"`
 		MpAppID         string    `json:"mp_appid,omitempty"`
 		MpPagePath      string    `json:"mp_page_path,omitempty"`
 		QrCodeURL       string    `json:"qr_code_url"`
@@ -433,7 +435,8 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 			items[i].DiscountValue = t.DiscountValue
 			items[i].ThresholdAmount = t.ThresholdAmount
 		}
-		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
+		items[i].SourceStoreName = s.resolveStoreName(ctx, ci.SourceStoreID)
+		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
 		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	}
 
@@ -492,7 +495,7 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 		resp.Type = t.Type
 		resp.DiscountValue = t.DiscountValue
 		resp.ThresholdAmount = t.ThresholdAmount
-		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
+		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
 	}
 	resp.QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	return resp, nil
@@ -792,48 +795,43 @@ func (s *CouponService) generateIdempotencyKey() string {
 	)
 }
 
-// Default QR code URL used as fallback when a store has no QR code configured.
-const defaultQrCodeURL = "https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_1782303867445088958.jpg"
+// Fallback QR code, used when the issuing store has none configured. Each
+// coupon provider configures its own; this only keeps the field non-empty.
+const defaultQrCodeURL = "https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_1787221555913512742.png"
 
-// resolveQrCodeURL returns the QR code URL for a store, or the default if not configured.
+// resolveQrCodeURL returns the QR code of the store that issued the coupon.
 func (s *CouponService) resolveQrCodeURL(ctx context.Context, storeID uint64) string {
 	store, err := s.getStoreCached(ctx, storeID)
-	if err != nil || store.QrCodeURL == nil {
+	if err != nil || store.QrCodeURL == nil || *store.QrCodeURL == "" {
 		return defaultQrCodeURL
 	}
 	return *store.QrCodeURL
 }
 
-// resolveMpInfo returns mini-program redirect info for a template's first applicable store.
-func (s *CouponService) resolveMpInfo(ctx context.Context, templateID uint64) (mpAppID, mpPagePath string) {
-	t, err := s.getTemplateCached(ctx, templateID)
+// resolveStoreName returns the name of the store that issued the coupon, so a
+// coupon always names the provider it can actually be redeemed with.
+func (s *CouponService) resolveStoreName(ctx context.Context, storeID uint64) string {
+	store, err := s.getStoreCached(ctx, storeID)
 	if err != nil {
+		return ""
+	}
+	return store.Name
+}
+
+// resolveMpInfo returns redirect info for the store that issued the coupon.
+// It looks at that store only: falling back to the template's stores, and then
+// to an arbitrary active store, made a coupon advertise one provider while
+// linking to another.
+func (s *CouponService) resolveMpInfo(ctx context.Context, storeID uint64) (mpAppID, mpPagePath string) {
+	store, err := s.getStoreCached(ctx, storeID)
+	if err != nil || store.MpAppID == nil || *store.MpAppID == "" {
 		return "", ""
 	}
-	var storeIDs []uint64
-	if t.ApplicableScope == "specific" {
-		storeIDs, _ = s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, templateID)
+	mpAppID = *store.MpAppID
+	if store.MpPagePath != nil {
+		mpPagePath = *store.MpPagePath
 	}
-	if len(storeIDs) == 0 {
-		stores, err := s.storeRepo.ListActive(ctx)
-		if err == nil && len(stores) > 0 {
-			storeIDs = []uint64{stores[0].ID}
-		}
-	}
-	for _, sid := range storeIDs {
-		store, err := s.getStoreCached(ctx, sid)
-		if err != nil {
-			continue
-		}
-		if store.MpAppID != nil && *store.MpAppID != "" {
-			mpAppID = *store.MpAppID
-			if store.MpPagePath != nil {
-				mpPagePath = *store.MpPagePath
-			}
-			return
-		}
-	}
-	return "", ""
+	return
 }
 
 func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstance) (*response.CouponDetailResponse, error) {
@@ -877,7 +875,7 @@ func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstanc
 		resp.Type = t.Type
 		resp.DiscountValue = t.DiscountValue
 		resp.ThresholdAmount = t.ThresholdAmount
-		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.TemplateID)
+		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
 	}
 	resp.QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
 	return resp, nil
