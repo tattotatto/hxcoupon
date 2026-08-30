@@ -13,6 +13,7 @@ type TemplateResponse struct {
 	DiscountValue      float64         `json:"discount_value"`
 	ThresholdAmount    float64         `json:"threshold_amount"`
 	ApplicableScope    string          `json:"applicable_scope"`
+	StoreID            *uint64         `json:"store_id,omitempty"` // 创建/所属门店
 	StoreIDs           []uint64        `json:"store_ids,omitempty"`
 	Stackable          bool            `json:"stackable"`
 	MaxStackCount      uint8           `json:"max_stack_count"`
@@ -43,6 +44,7 @@ func ToTemplateResponse(t *model.CouponTemplate, storeIDs []uint64) *TemplateRes
 		DiscountValue:      t.DiscountValue,
 		ThresholdAmount:    t.ThresholdAmount,
 		ApplicableScope:    t.ApplicableScope,
+		StoreID:            t.StoreID,
 		StoreIDs:           storeIDs,
 		Stackable:          t.Stackable,
 		MaxStackCount:      t.MaxStackCount,

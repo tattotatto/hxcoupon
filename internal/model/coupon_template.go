@@ -8,28 +8,29 @@ import (
 )
 
 type CouponTemplate struct {
-	ID                 uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name               string          `gorm:"type:varchar(128);not null" json:"name"`
-	Type               string          `gorm:"type:enum('full_reduction','discount','fixed_amount');not null" json:"type"`
-	DiscountValue      float64         `gorm:"type:decimal(10,2);not null" json:"discount_value"`
-	ThresholdAmount    float64         `gorm:"type:decimal(10,2);not null;default:0" json:"threshold_amount"`
-	ApplicableScope    string          `gorm:"type:enum('all','specific');not null;default:'all'" json:"applicable_scope"`
-	Stackable          bool            `gorm:"not null;default:false" json:"stackable"`
-	MaxStackCount      uint8           `gorm:"default:1" json:"max_stack_count"`
-	ValidityType       string          `gorm:"type:enum('fixed_date','days_after_receive');not null" json:"validity_type"`
-	ValidityDays       uint            `gorm:"default:null" json:"validity_days"`
-	ValidStart         *time.Time      `gorm:"default:null" json:"valid_start"`
-	ValidEnd           *time.Time      `gorm:"default:null" json:"valid_end"`
-	TotalQuantity      uint            `gorm:"default:0" json:"total_quantity"`
-	IssuedCount        uint            `gorm:"not null;default:0" json:"issued_count"`
-	PerUserLimit       uint            `gorm:"default:1" json:"per_user_limit"`
-	ProductRestriction *JSON           `gorm:"type:json;default:null" json:"product_restriction"`
-	Status             int8            `gorm:"not null;default:0;index" json:"status"`
-	UserID             *uint64         `gorm:"default:null;index" json:"user_id"`
-	Description        *string         `gorm:"type:text;default:null" json:"description"`
-	CreatedBy          string          `gorm:"type:varchar(64)" json:"created_by"`
-	CreatedAt          time.Time       `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt          time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
+	ID                 uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name               string     `gorm:"type:varchar(128);not null" json:"name"`
+	Type               string     `gorm:"type:enum('full_reduction','discount','fixed_amount');not null" json:"type"`
+	DiscountValue      float64    `gorm:"type:decimal(10,2);not null" json:"discount_value"`
+	ThresholdAmount    float64    `gorm:"type:decimal(10,2);not null;default:0" json:"threshold_amount"`
+	ApplicableScope    string     `gorm:"type:enum('all','specific');not null;default:'all'" json:"applicable_scope"`
+	Stackable          bool       `gorm:"not null;default:false" json:"stackable"`
+	MaxStackCount      uint8      `gorm:"default:1" json:"max_stack_count"`
+	ValidityType       string     `gorm:"type:enum('fixed_date','days_after_receive');not null" json:"validity_type"`
+	ValidityDays       uint       `gorm:"default:null" json:"validity_days"`
+	ValidStart         *time.Time `gorm:"default:null" json:"valid_start"`
+	ValidEnd           *time.Time `gorm:"default:null" json:"valid_end"`
+	TotalQuantity      uint       `gorm:"default:0" json:"total_quantity"`
+	IssuedCount        uint       `gorm:"not null;default:0" json:"issued_count"`
+	PerUserLimit       uint       `gorm:"default:1" json:"per_user_limit"`
+	ProductRestriction *JSON      `gorm:"type:json;default:null" json:"product_restriction"`
+	Status             int8       `gorm:"not null;default:0;index" json:"status"`
+	StoreID            *uint64    `gorm:"default:null;index" json:"store_id"`
+	UserID             *uint64    `gorm:"default:null;index" json:"user_id"`
+	Description        *string    `gorm:"type:text;default:null" json:"description"`
+	CreatedBy          string     `gorm:"type:varchar(64)" json:"created_by"`
+	CreatedAt          time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt          time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (CouponTemplate) TableName() string { return "coupon_templates" }

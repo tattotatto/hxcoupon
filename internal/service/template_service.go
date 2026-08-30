@@ -17,10 +17,10 @@ import (
 )
 
 type TemplateService struct {
-	db                 *gorm.DB
-	templateRepo       *repository.TemplateRepo
-	templateStoreRepo  *repository.TemplateStoreRepo
-	storeRepo          *repository.StoreRepo
+	db                *gorm.DB
+	templateRepo      *repository.TemplateRepo
+	templateStoreRepo *repository.TemplateStoreRepo
+	storeRepo         *repository.StoreRepo
 }
 
 func NewTemplateService(db *gorm.DB, tr *repository.TemplateRepo, tsr *repository.TemplateStoreRepo, sr *repository.StoreRepo) *TemplateService {
@@ -28,6 +28,17 @@ func NewTemplateService(db *gorm.DB, tr *repository.TemplateRepo, tsr *repositor
 }
 
 func (s *TemplateService) Create(ctx context.Context, req *request.CreateTemplateRequest, createdBy string) (*response.TemplateResponse, error) {
+	// The owning/creator store: explicit create_store_id wins; otherwise the
+	// first applicable store for specific-scope templates. Legacy all-scope
+	// templates keep NULL and coupon resolution falls back to the issuing store.
+	var createStoreID *uint64
+	if req.CreateStoreID != nil && *req.CreateStoreID > 0 {
+		createStoreID = req.CreateStoreID
+	} else if req.ApplicableScope == "specific" && len(req.StoreIDs) > 0 {
+		sid := req.StoreIDs[0]
+		createStoreID = &sid
+	}
+
 	t := &model.CouponTemplate{
 		Name:            req.Name,
 		Type:            req.Type,
@@ -41,6 +52,7 @@ func (s *TemplateService) Create(ctx context.Context, req *request.CreateTemplat
 		TotalQuantity:   req.TotalQuantity,
 		PerUserLimit:    req.PerUserLimit,
 		Status:          0,
+		StoreID:         createStoreID,
 		CreatedBy:       createdBy,
 	}
 
@@ -132,7 +144,7 @@ func (s *TemplateService) List(ctx context.Context, f request.TemplateListReques
 	for i, t := range templates {
 		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 		items[i] = *response.ToTemplateResponse(&t, storeIDs)
-			s.fillMpInfo(ctx, &items[i], &t)
+		s.fillMpInfo(ctx, &items[i], &t)
 	}
 
 	return &response.PaginatedData{
@@ -188,7 +200,7 @@ func (s *TemplateService) listByStoreID(ctx context.Context, storeID uint64, sta
 	for i, t := range templates {
 		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 		items[i] = *response.ToTemplateResponse(&t, storeIDs)
-			s.fillMpInfo(ctx, &items[i], &t)
+		s.fillMpInfo(ctx, &items[i], &t)
 	}
 
 	return &response.PaginatedData{
@@ -223,7 +235,7 @@ func (s *TemplateService) ListPublished(ctx context.Context, page, pageSize int)
 	for i, t := range templates {
 		storeIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
 		items[i] = *response.ToTemplateResponse(&t, storeIDs)
-			s.fillMpInfo(ctx, &items[i], &t)
+		s.fillMpInfo(ctx, &items[i], &t)
 	}
 
 	return &response.PaginatedData{
@@ -401,35 +413,59 @@ func (s *TemplateService) GetSourceStoreID(ctx context.Context, templateID uint6
 }
 
 // fillMpInfo populates the mini-program and store info on a TemplateResponse.
+// The creator store (store_id) takes priority over the applicable stores so
+// template cards and coupon details agree on which store owns the template.
 func (s *TemplateService) fillMpInfo(ctx context.Context, resp *response.TemplateResponse, t *model.CouponTemplate) {
 	resp.MpAppID, resp.MpPagePath = s.ResolveMpInfo(ctx, t)
-	// Populate store name from the first applicable store
-	var storeIDs []uint64
-	if t.ApplicableScope == "specific" {
-		storeIDs, _ = s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
-	}
-	if len(storeIDs) > 0 {
-		store, err := s.storeRepo.GetByID(ctx, storeIDs[0])
-		if err == nil {
-			resp.StoreName = store.Name
+	for _, sid := range s.leaderStoreIDs(ctx, t) {
+		store, err := s.storeRepo.GetByID(ctx, sid)
+		if err != nil {
+			continue
 		}
+		resp.StoreName = store.Name
+		break
 	}
 }
 
-// ResolveMpInfo returns the mini-program AppID and page path for a template's first applicable store.
-func (s *TemplateService) ResolveMpInfo(ctx context.Context, t *model.CouponTemplate) (mpAppID, mpPagePath string) {
-	var storeIDs []uint64
-	if t.ApplicableScope == "specific" {
-		storeIDs, _ = s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
-	}
-	if len(storeIDs) == 0 {
-		stores, err := s.storeRepo.ListActive(ctx)
-		if err == nil && len(stores) > 0 {
-			storeIDs = []uint64{stores[0].ID}
+// leaderStoreIDs returns the candidate stores that represent a template: the
+// creator store (store_id) first, then the applicable stores, and finally any
+// active store for legacy all-scope templates that record no creator store.
+func (s *TemplateService) leaderStoreIDs(ctx context.Context, t *model.CouponTemplate) []uint64 {
+	var ids []uint64
+	seen := make(map[uint64]struct{})
+	add := func(id uint64) {
+		if id == 0 {
+			return
 		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
 	}
 
-	for _, sid := range storeIDs {
+	if t.StoreID != nil {
+		add(*t.StoreID)
+	}
+	if t.ApplicableScope == "specific" {
+		appIDs, _ := s.templateStoreRepo.GetStoreIDsByTemplateID(ctx, t.ID)
+		for _, id := range appIDs {
+			add(id)
+		}
+	}
+	if len(ids) == 0 {
+		stores, err := s.storeRepo.ListActive(ctx)
+		if err == nil && len(stores) > 0 {
+			ids = append(ids, stores[0].ID)
+		}
+	}
+	return ids
+}
+
+// ResolveMpInfo returns the mini-program AppID and page path for a template's
+// owning store: the creator store first, then the first applicable store.
+func (s *TemplateService) ResolveMpInfo(ctx context.Context, t *model.CouponTemplate) (mpAppID, mpPagePath string) {
+	for _, sid := range s.leaderStoreIDs(ctx, t) {
 		store, err := s.storeRepo.GetByID(ctx, sid)
 		if err != nil {
 			continue

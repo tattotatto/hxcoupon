@@ -1,21 +1,22 @@
 package request
 
 type CreateTemplateRequest struct {
-	Name               string    `json:"name" validate:"required,max=128"`
-	Type               string    `json:"type" validate:"required,oneof=full_reduction discount fixed_amount"`
-	DiscountValue      float64   `json:"discount_value" validate:"required,gt=0"`
-	ThresholdAmount    float64   `json:"threshold_amount" validate:"gte=0"`
-	ApplicableScope    string    `json:"applicable_scope" validate:"required,oneof=all specific"`
-	StoreIDs           []uint64  `json:"store_ids"`
-	Stackable          bool      `json:"stackable"`
-	MaxStackCount      uint8     `json:"max_stack_count" validate:"gte=1"`
-	ValidityType       string    `json:"validity_type" validate:"required,oneof=fixed_date days_after_receive"`
-	ValidityDays       uint      `json:"validity_days"`
-	ValidStart         string    `json:"valid_start"`
-	ValidEnd           string    `json:"valid_end"`
-	TotalQuantity      uint      `json:"total_quantity" validate:"gte=0"`
-	PerUserLimit       uint      `json:"per_user_limit" validate:"gte=1"`
-	ProductRestriction string    `json:"product_restriction"`
+	Name               string   `json:"name" validate:"required,max=128"`
+	Type               string   `json:"type" validate:"required,oneof=full_reduction discount fixed_amount"`
+	DiscountValue      float64  `json:"discount_value" validate:"required,gt=0"`
+	ThresholdAmount    float64  `json:"threshold_amount" validate:"gte=0"`
+	ApplicableScope    string   `json:"applicable_scope" validate:"required,oneof=all specific"`
+	CreateStoreID      *uint64  `json:"create_store_id"` // 创建/所属门店；缺省时 service 取 store_ids[0]
+	StoreIDs           []uint64 `json:"store_ids"`
+	Stackable          bool     `json:"stackable"`
+	MaxStackCount      uint8    `json:"max_stack_count" validate:"gte=1"`
+	ValidityType       string   `json:"validity_type" validate:"required,oneof=fixed_date days_after_receive"`
+	ValidityDays       uint     `json:"validity_days"`
+	ValidStart         string   `json:"valid_start"`
+	ValidEnd           string   `json:"valid_end"`
+	TotalQuantity      uint     `json:"total_quantity" validate:"gte=0"`
+	PerUserLimit       uint     `json:"per_user_limit" validate:"gte=1"`
+	ProductRestriction string   `json:"product_restriction"`
 }
 
 type UpdateTemplateRequest struct {

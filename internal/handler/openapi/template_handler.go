@@ -40,6 +40,11 @@ func (h *TemplateHandler) Create(c *gin.Context) {
 		createdBy = store.Name
 	}
 
+	// The calling store owns the template: its store_id is recorded so coupon
+	// responses resolve store name / QR / mp redirect to this store.
+	sid := storeID.(uint64)
+	req.CreateStoreID = &sid
+
 	// Auto-assign the calling store when scope is specific but no store_ids given.
 	if req.ApplicableScope == "specific" && len(req.StoreIDs) == 0 {
 		req.StoreIDs = []uint64{storeID.(uint64)}

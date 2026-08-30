@@ -20,13 +20,13 @@ import (
 )
 
 type CouponService struct {
-	db                 *gorm.DB
-	instanceRepo       *repository.InstanceRepo
-	templateRepo       *repository.TemplateRepo
-	templateStoreRepo  *repository.TemplateStoreRepo
-	usageRecordRepo    *repository.UsageRecordRepo
-	storeRepo          *repository.StoreRepo
-	credentialRepo     *repository.CredentialRepo
+	db                *gorm.DB
+	instanceRepo      *repository.InstanceRepo
+	templateRepo      *repository.TemplateRepo
+	templateStoreRepo *repository.TemplateStoreRepo
+	usageRecordRepo   *repository.UsageRecordRepo
+	storeRepo         *repository.StoreRepo
+	credentialRepo    *repository.CredentialRepo
 }
 
 func NewCouponService(
@@ -137,6 +137,12 @@ func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templat
 			return apperror.NewWithErr(errcode.NoInventory, err)
 		}
 
+		// QR belongs to the template's creator store, not the issuing store.
+		storeID := sourceStoreID
+		if t.StoreID != nil && *t.StoreID > 0 {
+			storeID = *t.StoreID
+		}
+
 		result = &response.CouponIssueResponse{
 			CouponID:        ci.ID,
 			CouponCode:      ci.CouponCode,
@@ -147,7 +153,7 @@ func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templat
 			ValidStart:      ci.ValidStart,
 			ValidEnd:        ci.ValidEnd,
 			Status:          ci.Status,
-		QrCodeURL:       s.resolveQrCodeURL(ctx, sourceStoreID),
+			QrCodeURL:       s.resolveQrCodeURL(ctx, storeID),
 		}
 		return nil
 	})
@@ -199,15 +205,16 @@ func (s *CouponService) GetAvailable(ctx context.Context, userPhone string, stor
 			ValidEnd:        ci.ValidEnd,
 			Stackable:       false,
 		}
+		storeID := s.resolveTemplateStoreID(ctx, &ci)
 		if t != nil {
 			items[i].Type = t.Type
 			items[i].DiscountValue = t.DiscountValue
 			items[i].ThresholdAmount = t.ThresholdAmount
 			items[i].Stackable = t.Stackable
 		}
-		items[i].SourceStoreName = s.resolveStoreName(ctx, ci.SourceStoreID)
-		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
-		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
+		items[i].SourceStoreName = s.resolveStoreName(ctx, storeID)
+		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, storeID)
+		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, storeID)
 	}
 
 	return &response.PaginatedData{
@@ -435,9 +442,10 @@ func (s *CouponService) ListByUser(ctx context.Context, userPhone, status string
 			items[i].DiscountValue = t.DiscountValue
 			items[i].ThresholdAmount = t.ThresholdAmount
 		}
-		items[i].SourceStoreName = s.resolveStoreName(ctx, ci.SourceStoreID)
-		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
-		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
+		storeID := s.resolveTemplateStoreID(ctx, &ci)
+		items[i].SourceStoreName = s.resolveStoreName(ctx, storeID)
+		items[i].MpAppID, items[i].MpPagePath = s.resolveMpInfo(ctx, storeID)
+		items[i].QrCodeURL = s.resolveQrCodeURL(ctx, storeID)
 	}
 
 	return &response.PaginatedData{
@@ -461,7 +469,11 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 		templateName = t.Name
 	}
 
-	sourceStore, _ := s.getStoreCached(ctx, ci.SourceStoreID)
+	// Resolve the store the coupon belongs to: the template's creator store,
+	// falling back to the issuing store for legacy templates.
+	storeID := s.resolveTemplateStoreID(ctx, ci)
+
+	sourceStore, _ := s.getStoreCached(ctx, storeID)
 	sourceStoreName := ""
 	if sourceStore != nil {
 		sourceStoreName = sourceStore.Name
@@ -495,9 +507,9 @@ func (s *CouponService) GetDetail(ctx context.Context, couponCode string) (*resp
 		resp.Type = t.Type
 		resp.DiscountValue = t.DiscountValue
 		resp.ThresholdAmount = t.ThresholdAmount
-		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
+		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, storeID)
 	}
-	resp.QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
+	resp.QrCodeURL = s.resolveQrCodeURL(ctx, storeID)
 	return resp, nil
 }
 
@@ -657,7 +669,7 @@ func (s *CouponService) buildIssueResponse(ctx context.Context, ci *model.Coupon
 		ValidStart:      ci.ValidStart,
 		ValidEnd:        ci.ValidEnd,
 		Status:          ci.Status,
-		QrCodeURL:       s.resolveQrCodeURL(ctx, ci.SourceStoreID),
+		QrCodeURL:       s.resolveQrCodeURL(ctx, s.resolveTemplateStoreID(ctx, ci)),
 	}, nil
 }
 
@@ -701,12 +713,12 @@ func (s *CouponService) ListAdminRecords(ctx context.Context, page, pageSize int
 	items := make([]recordItem, len(instances))
 	for i, ci := range instances {
 		items[i] = recordItem{
-			ID:         ci.ID,
-			CouponCode: ci.CouponCode,
-			UserPhone:  ci.UserPhone,
-			Status:     ci.Status,
+			ID:          ci.ID,
+			CouponCode:  ci.CouponCode,
+			UserPhone:   ci.UserPhone,
+			Status:      ci.Status,
 			ReceiveTime: ci.ReceiveTime,
-			UseTime:    ci.UseTime,
+			UseTime:     ci.UseTime,
 		}
 		if t, _ := s.getTemplateCached(ctx, ci.TemplateID); t != nil {
 			items[i].TemplateName = t.Name
@@ -747,13 +759,13 @@ func (s *CouponService) ListConsumeRecords(ctx context.Context, page, pageSize i
 	}
 
 	type consumeRecordItem struct {
-		ID              uint64    `json:"id"`
-		CouponID        uint64    `json:"coupon_id"`
-		UserPhone       string    `json:"user_phone"`
-		StoreName       string    `json:"store_name"`
-		Action          string    `json:"action"`
-		OrderInfo       *model.JSON `json:"order_info,omitempty"`
-		CreatedAt       time.Time `json:"created_at"`
+		ID        uint64      `json:"id"`
+		CouponID  uint64      `json:"coupon_id"`
+		UserPhone string      `json:"user_phone"`
+		StoreName string      `json:"store_name"`
+		Action    string      `json:"action"`
+		OrderInfo *model.JSON `json:"order_info,omitempty"`
+		CreatedAt time.Time   `json:"created_at"`
 	}
 
 	items := make([]consumeRecordItem, len(records))
@@ -795,11 +807,21 @@ func (s *CouponService) generateIdempotencyKey() string {
 	)
 }
 
+// resolveTemplateStoreID returns the store that owns the coupon's template
+// (its creator store), falling back to the issuing store when the template
+// records none (legacy all-scope templates).
+func (s *CouponService) resolveTemplateStoreID(ctx context.Context, ci *model.CouponInstance) uint64 {
+	if t, err := s.getTemplateCached(ctx, ci.TemplateID); err == nil && t.StoreID != nil && *t.StoreID > 0 {
+		return *t.StoreID
+	}
+	return ci.SourceStoreID
+}
+
 // Fallback QR code, used when the issuing store has none configured. Each
 // coupon provider configures its own; this only keeps the field non-empty.
 const defaultQrCodeURL = "https://ynhx.oss-cn-chengdu.aliyuncs.com/qrcodes/store_1_1787221555913512742.png"
 
-// resolveQrCodeURL returns the QR code of the store that issued the coupon.
+// resolveQrCodeURL returns the QR code of the store that owns the coupon.
 func (s *CouponService) resolveQrCodeURL(ctx context.Context, storeID uint64) string {
 	store, err := s.getStoreCached(ctx, storeID)
 	if err != nil || store.QrCodeURL == nil || *store.QrCodeURL == "" {
@@ -808,7 +830,7 @@ func (s *CouponService) resolveQrCodeURL(ctx context.Context, storeID uint64) st
 	return *store.QrCodeURL
 }
 
-// resolveStoreName returns the name of the store that issued the coupon, so a
+// resolveStoreName returns the name of the store that owns the coupon, so a
 // coupon always names the provider it can actually be redeemed with.
 func (s *CouponService) resolveStoreName(ctx context.Context, storeID uint64) string {
 	store, err := s.getStoreCached(ctx, storeID)
@@ -818,10 +840,9 @@ func (s *CouponService) resolveStoreName(ctx context.Context, storeID uint64) st
 	return store.Name
 }
 
-// resolveMpInfo returns redirect info for the store that issued the coupon.
-// It looks at that store only: falling back to the template's stores, and then
-// to an arbitrary active store, made a coupon advertise one provider while
-// linking to another.
+// resolveMpInfo returns redirect info for the store that owns the coupon.
+// It looks at that store only, so a coupon never advertises one provider's
+// store while linking to another.
 func (s *CouponService) resolveMpInfo(ctx context.Context, storeID uint64) (mpAppID, mpPagePath string) {
 	store, err := s.getStoreCached(ctx, storeID)
 	if err != nil || store.MpAppID == nil || *store.MpAppID == "" {
@@ -841,7 +862,11 @@ func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstanc
 		templateName = t.Name
 	}
 
-	sourceStore, _ := s.getStoreCached(ctx, ci.SourceStoreID)
+	// Resolve the store the coupon belongs to: the template's creator store,
+	// falling back to the issuing store for legacy templates.
+	storeID := s.resolveTemplateStoreID(ctx, ci)
+
+	sourceStore, _ := s.getStoreCached(ctx, storeID)
 	sourceStoreName := ""
 	if sourceStore != nil {
 		sourceStoreName = sourceStore.Name
@@ -875,8 +900,8 @@ func (s *CouponService) buildDetail(ctx context.Context, ci *model.CouponInstanc
 		resp.Type = t.Type
 		resp.DiscountValue = t.DiscountValue
 		resp.ThresholdAmount = t.ThresholdAmount
-		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, ci.SourceStoreID)
+		resp.MpAppID, resp.MpPagePath = s.resolveMpInfo(ctx, storeID)
 	}
-	resp.QrCodeURL = s.resolveQrCodeURL(ctx, ci.SourceStoreID)
+	resp.QrCodeURL = s.resolveQrCodeURL(ctx, storeID)
 	return resp, nil
 }
