@@ -1,10 +1,11 @@
 package request
 
 // AdminIssueCouponRequest for admin-side coupon issuance (includes store_id)
+// UserPhone may contain multiple phone numbers separated by English commas for batch issuance.
 type AdminIssueCouponRequest struct {
 	StoreID    uint64 `json:"store_id" validate:"required"`
 	TemplateID uint64 `json:"template_id" validate:"required"`
-	UserPhone  string `json:"user_phone" validate:"required,max=20"`
+	UserPhone  string `json:"user_phone" validate:"required"`
 }
 
 type IssueCouponRequest struct {

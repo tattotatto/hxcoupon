@@ -20,7 +20,8 @@ func NewCouponHandler(couponService *service.CouponService) *CouponHandler {
 	return &CouponHandler{couponService: couponService}
 }
 
-// Issue issues a coupon from the admin's specified store.
+// Issue issues coupons from the admin's specified store.
+// user_phone may contain multiple phone numbers separated by English commas for batch issuance.
 func (h *CouponHandler) Issue(c *gin.Context) {
 	var req request.AdminIssueCouponRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -28,7 +29,7 @@ func (h *CouponHandler) Issue(c *gin.Context) {
 		return
 	}
 
-	result, err := h.couponService.Issue(c.Request.Context(), req.StoreID, req.TemplateID, req.UserPhone)
+	result, err := h.couponService.BatchIssue(c.Request.Context(), req.StoreID, req.TemplateID, req.UserPhone)
 	if err != nil {
 		handleError(c, err)
 		return

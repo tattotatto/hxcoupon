@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Form, Input, Button, Select, message, Result, Descriptions, Tag } from 'antd';
+import { Card, Form, Input, Button, Select, message, Result, Table, Tag, Typography, Space } from 'antd';
 import { couponApi } from '../../api/coupon';
 import { storeApi } from '../../api/store';
 import { templateApi } from '../../api/template';
+
+const { Text } = Typography;
 
 interface StoreOption {
   id: number;
@@ -17,10 +19,36 @@ interface TemplateOption {
   applicable_scope: string;
 }
 
+interface BatchItem {
+  user_phone: string;
+  success: boolean;
+  error_code?: number;
+  error_message?: string;
+  coupon?: {
+    coupon_id: number;
+    coupon_code: string;
+    template_name: string;
+    type: string;
+    discount_value: number;
+    threshold_amount: number;
+    valid_start: string;
+    valid_end: string;
+    status: string;
+    qr_code_url: string;
+  };
+}
+
+interface BatchResult {
+  total_count: number;
+  success_count: number;
+  failed_count: number;
+  items: BatchItem[];
+}
+
 export default function IssueForm() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<BatchResult | null>(null);
   const [stores, setStores] = useState<StoreOption[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
@@ -51,33 +79,69 @@ export default function IssueForm() {
     setLoading(true);
     try {
       const res = await couponApi.issue(values);
-      setResult(res.data.data);
-      message.success('发券成功');
+      const data: BatchResult = res.data.data;
+      setResult(data);
+      if (data.failed_count === 0) {
+        message.success(`发券成功，共 ${data.success_count} 张`);
+      } else if (data.success_count === 0) {
+        message.warning(`发券全部失败，共 ${data.failed_count} 条`);
+      } else {
+        message.warning(`部分成功：成功 ${data.success_count}，失败 ${data.failed_count}`);
+      }
     } catch { /* handled */ }
     finally { setLoading(false); }
   };
 
   if (result) {
+    const allOk = result.failed_count === 0;
+    const allFail = result.success_count === 0;
+    const status: 'success' | 'warning' | 'error' = allOk ? 'success' : allFail ? 'error' : 'warning';
+    const title = allOk
+      ? `发券成功（${result.success_count} 张）`
+      : allFail
+      ? `发券全部失败（${result.failed_count} 条）`
+      : `部分成功（成功 ${result.success_count} / 失败 ${result.failed_count}）`;
+
     return (
-      <Card style={{ borderRadius: 12, maxWidth: 600 }}>
+      <Card style={{ borderRadius: 12, maxWidth: 720 }}>
         <Result
-          status="success"
-          title="发券成功"
-          subTitle={`优惠券已成功发放`}
+          status={status}
+          title={title}
           extra={[
             <Button key="again" type="primary" onClick={() => { setResult(null); setSelectedStoreId(undefined); setTemplates([]); form.resetFields(); }}>继续发券</Button>,
           ]}
         />
-        <Descriptions bordered size="small" style={{ marginTop: 16 }}>
-          <Descriptions.Item label="券码">{result.coupon_code}</Descriptions.Item>
-          <Descriptions.Item label="模板">{result.template_name}</Descriptions.Item>
-          <Descriptions.Item label="状态">
-            <Tag color="success">已发放</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="类型">{result.type}</Descriptions.Item>
-          <Descriptions.Item label="优惠值">{result.type === 'discount' ? `${(result.discount_value / 10).toFixed(1)}折` : `¥${result.discount_value}`}</Descriptions.Item>
-          <Descriptions.Item label="有效期">{result.valid_start} ~ {result.valid_end}</Descriptions.Item>
-        </Descriptions>
+        <Table<BatchItem>
+          size="small"
+          style={{ marginTop: 16 }}
+          rowKey={(r) => `${r.user_phone}-${r.coupon?.coupon_code ?? 'fail'}`}
+          dataSource={result.items}
+          pagination={false}
+          columns={[
+            { title: '手机号', dataIndex: 'user_phone', width: 140 },
+            {
+              title: '结果',
+              dataIndex: 'success',
+              width: 100,
+              render: (ok: boolean, row) =>
+                ok ? <Tag color="success">成功</Tag> : <Tag color="error">失败</Tag>,
+            },
+            {
+              title: '详情',
+              render: (_: unknown, row) =>
+                row.success && row.coupon ? (
+                  <Space direction="vertical" size={0}>
+                    <Text>券码：{row.coupon.coupon_code}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {row.coupon.template_name} · {row.coupon.valid_start} ~ {row.coupon.valid_end}
+                    </Text>
+                  </Space>
+                ) : (
+                  <Text type="danger">{row.error_message || '未知错误'}</Text>
+                ),
+            },
+          ]}
+        />
       </Card>
     );
   }
@@ -110,8 +174,13 @@ export default function IssueForm() {
             }))}
           />
         </Form.Item>
-        <Form.Item name="user_phone" label="用户手机号" rules={[{ required: true, message: '请输入用户手机号' }, { max: 20 }]}>
-          <Input placeholder="用户手机号" />
+        <Form.Item
+          name="user_phone"
+          label="用户手机号"
+          extra="多个手机号请用英文逗号 , 分隔，单个失败不影响其他"
+          rules={[{ required: true, message: '请输入用户手机号' }]}
+        >
+          <Input placeholder="例如：13800001111,13800002222" />
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading} size="large">

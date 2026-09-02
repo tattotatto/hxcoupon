@@ -18,6 +18,25 @@ type CouponIssueResponse struct {
 	QrCodeURL       string    `json:"qr_code_url"`
 }
 
+// BatchIssueItem represents the result of issuing a single coupon in a batch.
+type BatchIssueItem struct {
+	UserPhone    string             `json:"user_phone"`
+	Success      bool               `json:"success"`
+	ErrorCode    int                `json:"error_code,omitempty"`
+	ErrorMessage string             `json:"error_message,omitempty"`
+	Coupon       *CouponIssueResponse `json:"coupon,omitempty"`
+}
+
+// BatchIssueResponse aggregates results from a batch coupon issuance.
+// Each phone number is processed independently; a failure for one phone
+// does not affect others.
+type BatchIssueResponse struct {
+	TotalCount   int             `json:"total_count"`
+	SuccessCount int             `json:"success_count"`
+	FailedCount  int             `json:"failed_count"`
+	Items        []BatchIssueItem `json:"items"`
+}
+
 type CouponAvailableResponse struct {
 	CouponID        uint64    `json:"coupon_id"`
 	CouponCode      string    `json:"coupon_code"`

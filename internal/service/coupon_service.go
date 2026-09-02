@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"hxcoupon/internal/dto/response"
@@ -162,6 +164,60 @@ func (s *CouponService) Issue(ctx context.Context, sourceStoreID uint64, templat
 		return nil, err
 	}
 	return result, nil
+}
+
+// BatchIssue issues coupons to multiple users by splitting userPhones on commas.
+// Each phone number is processed independently: a failure for one does not affect others.
+// Duplicates (after trim) are removed.
+func (s *CouponService) BatchIssue(ctx context.Context, sourceStoreID, templateID uint64, userPhones string) (*response.BatchIssueResponse, error) {
+	parts := strings.Split(userPhones, ",")
+	seen := make(map[string]struct{}, len(parts))
+	unique := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		unique = append(unique, p)
+	}
+
+	items := make([]response.BatchIssueItem, 0, len(unique))
+	success, failed := 0, 0
+	for _, phone := range unique {
+		coupon, err := s.Issue(ctx, sourceStoreID, templateID, phone)
+		if err != nil {
+			failed++
+			code, msg := errcode.InternalError, err.Error()
+			var ae *apperror.AppError
+			if errors.As(err, &ae) {
+				code, msg = ae.Code, ae.Message
+			}
+			items = append(items, response.BatchIssueItem{
+				UserPhone:    phone,
+				Success:      false,
+				ErrorCode:    code,
+				ErrorMessage: msg,
+			})
+			continue
+		}
+		success++
+		items = append(items, response.BatchIssueItem{
+			UserPhone: phone,
+			Success:   true,
+			Coupon:    coupon,
+		})
+	}
+
+	return &response.BatchIssueResponse{
+		TotalCount:   len(unique),
+		SuccessCount: success,
+		FailedCount:  failed,
+		Items:        items,
+	}, nil
 }
 
 // GetAvailable returns coupons usable at a store for a given order amount.
